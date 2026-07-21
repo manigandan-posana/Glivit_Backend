@@ -50,6 +50,35 @@ public interface DeviceRepository extends JpaRepository<Device, Long> {
 
     long countByTenantIdAndExpiryDateBefore(Long tenantId, LocalDate date);
 
+    // --- FleetAccessPolicy scoping helpers ---
+
+    @Query("select d.id from Device d where d.tenantId = :tenantId and d.vehicleId in :vehicleIds")
+    List<Long> deviceIdsByVehicleIds(@Param("tenantId") Long tenantId,
+                                     @Param("vehicleIds") java.util.Collection<Long> vehicleIds);
+
+    @Query("select d.id from Device d where d.tenantId = :tenantId and d.projectId in :projectIds")
+    List<Long> deviceIdsByProjectIds(@Param("tenantId") Long tenantId,
+                                     @Param("projectIds") java.util.Collection<Long> projectIds);
+
+    @Query("""
+            select d from Device d
+            where d.tenantId = :tenantId
+              and d.id in :deviceIds
+              and (:includeSuspended = true or d.status <> com.glivt.device.DeviceStatus.SUSPENDED)
+              and (:projectId is null or d.projectId = :projectId)
+              and (:groupId is null or d.groupId = :groupId)
+              and (:search is null
+                   or lower(d.name) like lower(concat('%', :search, '%'))
+                   or lower(d.imei) like lower(concat('%', :search, '%')))
+            """)
+    Page<Device> searchScoped(@Param("tenantId") Long tenantId,
+                              @Param("projectId") Long projectId,
+                              @Param("groupId") Long groupId,
+                              @Param("search") String search,
+                              @Param("includeSuspended") boolean includeSuspended,
+                              @Param("deviceIds") java.util.Collection<Long> deviceIds,
+                              Pageable pageable);
+
     /** Projection for device-first dashboard counting (every device, even NO_DATA). */
     interface DeviceStateRow {
         DeviceStatus getStatus();
