@@ -109,7 +109,7 @@ public class ReportService {
 
     private String buildCsv(Long tenantId, ReportRequest request) {
         StringBuilder csv = new StringBuilder("device_id,name,imei,status,expiry_date\n");
-        List<Device> devices = deviceRepository.search(tenantId, null, null, null,
+        List<Device> devices = deviceRepository.search(tenantId, null, null, null, true,
                 org.springframework.data.domain.PageRequest.of(0, 500)).getContent();
         for (Device device : devices) {
             if (request != null && request.deviceIds() != null

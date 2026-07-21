@@ -50,8 +50,21 @@ public class DeviceCurrentPosition {
     @Column(name = "gps_valid", nullable = false)
     private boolean gpsValid = true;
 
+    @Column(name = "external_power")
+    private Double externalPower;
+
+    private Double battery;
+
+    @Column(name = "fuel_level")
+    private Double fuelLevel;
+
+    private Integer satellites;
+
+    @Column(name = "network_signal")
+    private Integer networkSignal;
+
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 16)
+    @Column(nullable = false, length = 24)
     private DeviceState state = DeviceState.NO_DATA;
 
     @Column(length = 512)
