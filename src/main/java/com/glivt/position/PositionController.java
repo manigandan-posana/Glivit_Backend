@@ -27,10 +27,13 @@ public class PositionController {
 
     private final PositionQueryService positionQueryService;
     private final CurrentUser currentUser;
+    private final com.glivt.access.FleetAccessPolicy fleetAccessPolicy;
 
-    public PositionController(PositionQueryService positionQueryService, CurrentUser currentUser) {
+    public PositionController(PositionQueryService positionQueryService, CurrentUser currentUser,
+                             com.glivt.access.FleetAccessPolicy fleetAccessPolicy) {
         this.positionQueryService = positionQueryService;
         this.currentUser = currentUser;
+        this.fleetAccessPolicy = fleetAccessPolicy;
     }
 
     @GetMapping("/positions")
@@ -42,6 +45,7 @@ public class PositionController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "100") int size) {
         currentUser.requirePermission(PermissionKeys.VIEW_LIVE_LOCATION);
+        fleetAccessPolicy.requireDeviceAccess(currentUser.require(), deviceId);
         int safeSize = Math.min(Math.max(size, 1), MAX_PAGE_SIZE);
         PageRequest pageable = PageRequest.of(Math.max(page, 0), safeSize,
                 Sort.by(Sort.Direction.DESC, "deviceTime"));
@@ -56,6 +60,7 @@ public class PositionController {
             @RequestParam(required = false) Instant from,
             @RequestParam(required = false) Instant to) {
         currentUser.requirePermission(PermissionKeys.VIEW_LIVE_LOCATION);
+        fleetAccessPolicy.requireDeviceAccess(currentUser.require(), deviceId);
         return ApiResponse.ok(positionQueryService.playback(
                 currentUser.tenantId(), deviceId, from, to));
     }

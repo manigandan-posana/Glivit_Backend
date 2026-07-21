@@ -57,10 +57,18 @@ public class DeviceService {
      */
     @Transactional(readOnly = true)
     public PageResponse<DeviceSummary> list(Long tenantId, Long projectId, Long groupId,
-                                            String search, boolean includeSuspended, Pageable pageable) {
+                                            String search, boolean includeSuspended,
+                                            com.glivt.access.DeviceScope scope, Pageable pageable) {
         String term = (search != null && search.isBlank()) ? null : search;
-        Page<Device> page = deviceRepository.search(
-                tenantId, projectId, groupId, term, includeSuspended, pageable);
+        Page<Device> page;
+        if (scope == null || scope.unrestricted()) {
+            page = deviceRepository.search(tenantId, projectId, groupId, term, includeSuspended, pageable);
+        } else if (scope.deviceIds().isEmpty()) {
+            page = Page.empty(pageable);
+        } else {
+            page = deviceRepository.searchScoped(
+                    tenantId, projectId, groupId, term, includeSuspended, scope.deviceIds(), pageable);
+        }
 
         List<Long> ids = page.getContent().stream().map(Device::getId).toList();
         Map<Long, DeviceCurrentPosition> positions = ids.isEmpty()

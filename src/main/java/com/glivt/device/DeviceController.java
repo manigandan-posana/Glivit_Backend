@@ -33,10 +33,13 @@ public class DeviceController {
 
     private final DeviceService deviceService;
     private final CurrentUser currentUser;
+    private final com.glivt.access.FleetAccessPolicy fleetAccessPolicy;
 
-    public DeviceController(DeviceService deviceService, CurrentUser currentUser) {
+    public DeviceController(DeviceService deviceService, CurrentUser currentUser,
+                            com.glivt.access.FleetAccessPolicy fleetAccessPolicy) {
         this.deviceService = deviceService;
         this.currentUser = currentUser;
+        this.fleetAccessPolicy = fleetAccessPolicy;
     }
 
     @GetMapping
@@ -52,14 +55,17 @@ public class DeviceController {
         int safeSize = Math.min(Math.max(size, 1), MAX_PAGE_SIZE);
         PageRequest pageable = PageRequest.of(Math.max(page, 0), safeSize,
                 Sort.by(Sort.Direction.ASC, "name"));
+        var scope = fleetAccessPolicy.deviceScope(currentUser.require());
         return ApiResponse.ok(deviceService.list(
-                currentUser.tenantId(), projectId, groupId, search, includeSuspended, pageable));
+                currentUser.tenantId(), projectId, groupId, search, includeSuspended, scope, pageable));
     }
 
     @GetMapping("/{id}")
     @Operation(summary = "Device profile (tenant-scoped, prevents IDOR)")
     public ApiResponse<DeviceDetail> get(@PathVariable Long id) {
         currentUser.requirePermission(PermissionKeys.VIEW_LIVE_LOCATION);
+        // Enforce assignment scope, not just tenant scope (prevents driver IDOR).
+        fleetAccessPolicy.requireDeviceAccess(currentUser.require(), id);
         return ApiResponse.ok(deviceService.get(currentUser.tenantId(), id));
     }
 

@@ -1,4 +1,4 @@
-package com.glivt.driver;
+package com.glivt.access;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -9,17 +9,17 @@ import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
 import java.time.Instant;
-import java.time.LocalDate;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+/** Vehicle&lt;-&gt;driver assignment (historical + current) used for access scoping. */
 @Entity
-@Table(name = "drivers")
+@Table(name = "vehicle_driver_assignments")
 @Getter
 @Setter
 @NoArgsConstructor
-public class Driver {
+public class VehicleDriverAssignment {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -28,33 +28,26 @@ public class Driver {
     @Column(name = "tenant_id", nullable = false)
     private Long tenantId;
 
-    /** Optional link to the driver's user login (used by FleetAccessPolicy). */
-    @Column(name = "user_id")
-    private Long userId;
+    @Column(name = "vehicle_id", nullable = false)
+    private Long vehicleId;
 
-    @Column(name = "project_id")
-    private Long projectId;
-
-    @Column(nullable = false, length = 160)
-    private String name;
-
-    @Column(length = 64)
-    private String identifier;
-
-    @Column(length = 32)
-    private String phone;
-
-    @Column(name = "licence_number", length = 64)
-    private String licenceNumber;
-
-    @Column(name = "licence_expiry")
-    private LocalDate licenceExpiry;
-
-    @Column(name = "emergency_contact", length = 32)
-    private String emergencyContact;
+    @Column(name = "driver_id", nullable = false)
+    private Long driverId;
 
     @Column(nullable = false)
     private boolean active = true;
+
+    @Column(nullable = false, length = 32)
+    private String source = "MANUAL";
+
+    @Column(name = "assigned_by")
+    private Long assignedBy;
+
+    @Column(name = "start_time", nullable = false)
+    private Instant startTime = Instant.now();
+
+    @Column(name = "end_time")
+    private Instant endTime;
 
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
@@ -67,6 +60,9 @@ public class Driver {
         Instant now = Instant.now();
         this.createdAt = now;
         this.updatedAt = now;
+        if (this.startTime == null) {
+            this.startTime = now;
+        }
     }
 
     @PreUpdate
