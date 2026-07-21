@@ -57,9 +57,10 @@ public class DeviceService {
      */
     @Transactional(readOnly = true)
     public PageResponse<DeviceSummary> list(Long tenantId, Long projectId, Long groupId,
-                                            String search, Pageable pageable) {
+                                            String search, boolean includeSuspended, Pageable pageable) {
         String term = (search != null && search.isBlank()) ? null : search;
-        Page<Device> page = deviceRepository.search(tenantId, projectId, groupId, term, pageable);
+        Page<Device> page = deviceRepository.search(
+                tenantId, projectId, groupId, term, includeSuspended, pageable);
 
         List<Long> ids = page.getContent().stream().map(Device::getId).toList();
         Map<Long, DeviceCurrentPosition> positions = ids.isEmpty()
@@ -222,7 +223,12 @@ public class DeviceService {
     }
 
     private String stateOf(Device d, DeviceCurrentPosition p) {
-        if (d.getStatus() == DeviceStatus.EXPIRED) {
+        if (d.getStatus() == DeviceStatus.SUSPENDED) {
+            return DeviceState.SUSPENDED.name();
+        }
+        // Effective expiry: a passed expiry date counts even if the status was
+        // never manually flipped to EXPIRED.
+        if (DeviceExpiry.isExpired(d)) {
             return DeviceState.EXPIRED.name();
         }
         return p != null ? p.getState().name() : DeviceState.NO_DATA.name();

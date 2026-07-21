@@ -91,6 +91,14 @@ public class Position {
     @Column(columnDefinition = "TEXT")
     private String attributes;
 
+    /**
+     * Idempotency key (device-supplied message id, or a derived fallback) so
+     * retried / re-transmitted packets do not create duplicate history rows.
+     * Unique per device at the database level (see V3 migration).
+     */
+    @Column(name = "dedup_key", length = 120)
+    private String dedupKey;
+
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
 

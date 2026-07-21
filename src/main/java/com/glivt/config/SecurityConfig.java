@@ -29,6 +29,8 @@ public class SecurityConfig {
     private static final String[] PUBLIC_PATHS = {
             "/api/auth/login",
             "/api/auth/refresh",
+            "/api/telemetry/positions",
+            "/api/telemetry/batch",
             "/api/tenant/resolve",
             "/api/tenant/*/config",
             "/v3/api-docs/**",

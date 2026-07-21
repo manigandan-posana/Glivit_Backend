@@ -45,6 +45,7 @@ public class DeviceController {
             @RequestParam(required = false) String search,
             @RequestParam(required = false) Long projectId,
             @RequestParam(required = false) Long groupId,
+            @RequestParam(defaultValue = "false") boolean includeSuspended,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
         currentUser.requirePermission(PermissionKeys.VIEW_ALL_VEHICLES);
@@ -52,7 +53,7 @@ public class DeviceController {
         PageRequest pageable = PageRequest.of(Math.max(page, 0), safeSize,
                 Sort.by(Sort.Direction.ASC, "name"));
         return ApiResponse.ok(deviceService.list(
-                currentUser.tenantId(), projectId, groupId, search, pageable));
+                currentUser.tenantId(), projectId, groupId, search, includeSuspended, pageable));
     }
 
     @GetMapping("/{id}")
