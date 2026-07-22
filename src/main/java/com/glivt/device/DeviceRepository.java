@@ -12,6 +12,8 @@ public interface DeviceRepository extends JpaRepository<Device, Long> {
 
     Optional<Device> findByIdAndTenantId(Long id, Long tenantId);
 
+    Optional<Device> findByIngestToken(String ingestToken);
+
     boolean existsByImei(String imei);
 
     boolean existsByImeiIgnoreCase(String imei);

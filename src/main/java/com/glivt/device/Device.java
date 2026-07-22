@@ -96,6 +96,10 @@ public class Device {
     @Column(nullable = false, length = 16)
     private DeviceStatus status = DeviceStatus.ACTIVE;
 
+    /** Opaque per-device ingestion credential (null until first issued). */
+    @Column(name = "ingest_token", length = 80)
+    private String ingestToken;
+
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
 

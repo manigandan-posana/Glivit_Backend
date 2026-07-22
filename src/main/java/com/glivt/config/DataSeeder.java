@@ -125,6 +125,8 @@ public class DataSeeder implements CommandLineRunner {
         device.setExpiryDate(LocalDate.now().plusMonths(6));
         device.setActivatedAt(LocalDate.now().minusMonths(6));
         device.setStatus(DeviceStatus.ACTIVE);
+        // Predictable demo ingestion token so the GPS pipeline is testable locally.
+        device.setIngestToken("demo-ingest-" + imei);
         device = deviceRepository.save(device);
 
         DeviceCurrentPosition position = new DeviceCurrentPosition();
