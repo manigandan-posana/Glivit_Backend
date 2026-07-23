@@ -97,4 +97,17 @@ public class DeviceController {
         deviceService.suspend(user.getTenantId(), user.getUserId(), user.getUsername(), id);
         return ApiResponse.ok(null);
     }
+
+    @PostMapping("/{id}/ingest-token")
+    @Operation(summary = "Issue/rotate the device's GPS ingestion token (returned once)")
+    public ApiResponse<DeviceIngestTokenResponse> rotateIngestToken(@PathVariable Long id) {
+        currentUser.requirePermission(PermissionKeys.MANAGE_DEVICES);
+        var user = currentUser.require();
+        String token = deviceService.rotateIngestToken(
+                user.getTenantId(), user.getUserId(), user.getUsername(), id);
+        return ApiResponse.ok(new DeviceIngestTokenResponse(id, token));
+    }
+
+    public record DeviceIngestTokenResponse(Long deviceId, String ingestToken) {
+    }
 }

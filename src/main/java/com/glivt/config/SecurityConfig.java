@@ -33,6 +33,7 @@ public class SecurityConfig {
             "/api/telemetry/batch",
             "/api/tenant/resolve",
             "/api/tenant/*/config",
+            "/api/ingest/**",
             "/v3/api-docs/**",
             "/swagger-ui/**",
             "/swagger-ui.html",

@@ -45,14 +45,6 @@ public class Device {
     @Column(nullable = false, unique = true, length = 64)
     private String imei;
 
-    /**
-     * Rotating secret used to authenticate telemetry ingestion for this device.
-     * Auto-generated on first persist so every device is provisioned for
-     * ingestion; rotated on demand via the device service.
-     */
-    @Column(name = "device_token", length = 80)
-    private String deviceToken;
-
     @Column(nullable = false, length = 160)
     private String name;
 
@@ -104,9 +96,9 @@ public class Device {
     @Column(nullable = false, length = 16)
     private DeviceStatus status = DeviceStatus.ACTIVE;
 
-    /** Server time of the most recent accepted telemetry packet (UTC). */
-    @Column(name = "last_packet_at")
-    private Instant lastPacketAt;
+    /** Opaque per-device ingestion credential (null until first issued). */
+    @Column(name = "ingest_token", length = 80)
+    private String ingestToken;
 
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
@@ -119,9 +111,6 @@ public class Device {
         Instant now = Instant.now();
         this.createdAt = now;
         this.updatedAt = now;
-        if (this.deviceToken == null || this.deviceToken.isBlank()) {
-            this.deviceToken = java.util.UUID.randomUUID().toString().replace("-", "");
-        }
     }
 
     @PreUpdate

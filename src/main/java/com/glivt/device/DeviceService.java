@@ -121,6 +121,28 @@ public class DeviceService {
         return toDetail(device, position);
     }
 
+    /**
+     * Issues a fresh opaque ingestion token for the device (tenant-scoped) and
+     * returns it once. Rotating invalidates any previous token.
+     */
+    @Transactional
+    public String rotateIngestToken(Long tenantId, Long userId, String username, Long deviceId) {
+        Device device = deviceRepository.findByIdAndTenantId(deviceId, tenantId)
+                .orElseThrow(() -> new ResourceNotFoundException("Device not found"));
+        String token = generateIngestToken();
+        device.setIngestToken(token);
+        deviceRepository.save(device);
+        auditService.record(tenantId, userId, username, "ROTATE_INGEST_TOKEN", "DEVICE",
+                String.valueOf(deviceId), "SUCCESS", null);
+        return token;
+    }
+
+    private static String generateIngestToken() {
+        byte[] bytes = new byte[36];
+        new java.security.SecureRandom().nextBytes(bytes);
+        return java.util.Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
+    }
+
     @Transactional
     public void suspend(Long tenantId, Long userId, String username, Long deviceId) {
         Device device = deviceRepository.findByIdAndTenantId(deviceId, tenantId)
