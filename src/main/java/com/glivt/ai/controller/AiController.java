@@ -14,6 +14,7 @@ import com.glivt.ai.service.AiAlertBroadcaster;
 import com.glivt.ai.service.AiFleetService;
 import com.glivt.common.ApiResponse;
 import com.glivt.common.PageResponse;
+import com.glivt.geofence.dto.GeofenceDto;
 import com.glivt.common.ratelimit.RateLimiter;
 import com.glivt.security.AppUserPrincipal;
 import com.glivt.security.CurrentUser;
@@ -115,12 +116,11 @@ public class AiController {
     }
 
     @PostMapping("/geofence/suggestions/{id}/approve")
-    public ApiResponse<Void> approveGeofence(@PathVariable Long id) {
+    public ApiResponse<GeofenceDto> approveGeofence(@PathVariable Long id) {
         currentUser.requirePermission(PermissionKeys.MANAGE_GEOFENCES);
         AppUserPrincipal user = currentUser.require();
-        fleetService.approveGeofenceSuggestion(user.getTenantId(), user.getUserId(),
-                user.getUsername(), id);
-        return ApiResponse.ok(null);
+        return ApiResponse.ok(fleetService.approveGeofenceSuggestion(
+                user.getTenantId(), user.getUserId(), user.getUsername(), id));
     }
 
     @PostMapping("/geofence/suggestions/{id}/dismiss")
@@ -163,6 +163,14 @@ public class AiController {
     public SseEmitter stream() {
         currentUser.requirePermission(PermissionKeys.VIEW_LIVE_LOCATION);
         return broadcaster.subscribe(currentUser.tenantId());
+    }
+
+    @PostMapping("/chat")
+    public ApiResponse<com.glivt.ai.dto.ChatResponseDto> chat(
+            @Valid @RequestBody com.glivt.ai.dto.ChatRequestDto request) {
+        currentUser.requirePermission(PermissionKeys.VIEW_LIVE_LOCATION);
+        rateLimit("chat");
+        return ApiResponse.ok(fleetService.chat(currentUser.tenantId(), request));
     }
 
     private void rateLimit(String bucket) {

@@ -14,4 +14,4 @@ public class GlivtApplication {
 		SpringApplication.run(GlivtApplication.class, args);
 	}
 
-}
+} 

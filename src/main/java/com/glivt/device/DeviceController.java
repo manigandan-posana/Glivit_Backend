@@ -13,6 +13,8 @@ import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
+import org.springframework.format.annotation.DateTimeFormat;
+import java.time.Instant;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -32,10 +34,12 @@ public class DeviceController {
     private static final int MAX_PAGE_SIZE = 100;
 
     private final DeviceService deviceService;
+    private final DevicePlaybackService playbackService;
     private final CurrentUser currentUser;
 
-    public DeviceController(DeviceService deviceService, CurrentUser currentUser) {
+    public DeviceController(DeviceService deviceService, DevicePlaybackService playbackService, CurrentUser currentUser) {
         this.deviceService = deviceService;
+        this.playbackService = playbackService;
         this.currentUser = currentUser;
     }
 
@@ -60,6 +64,16 @@ public class DeviceController {
     public ApiResponse<DeviceDetail> get(@PathVariable Long id) {
         currentUser.requirePermission(PermissionKeys.VIEW_LIVE_LOCATION);
         return ApiResponse.ok(deviceService.get(currentUser.tenantId(), id));
+    }
+
+    @GetMapping("/{id}/playback")
+    @Operation(summary = "Get historical track points for a device")
+    public ApiResponse<com.glivt.device.dto.PlaybackResponse> getPlayback(
+            @PathVariable Long id,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant from,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant to) {
+        currentUser.requirePermission(PermissionKeys.VIEW_LIVE_LOCATION);
+        return ApiResponse.ok(playbackService.getPlayback(currentUser.tenantId(), id, from, to));
     }
 
     @PostMapping
