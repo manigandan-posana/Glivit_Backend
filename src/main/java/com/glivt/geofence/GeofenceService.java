@@ -3,6 +3,7 @@ package com.glivt.geofence;
 import com.glivt.audit.AuditService;
 import com.glivt.common.PageResponse;
 import com.glivt.common.exception.BadRequestException;
+import com.glivt.common.exception.DuplicateResourceException;
 import com.glivt.common.exception.ResourceNotFoundException;
 import com.glivt.device.DeviceRepository;
 import com.glivt.geofence.dto.GeofenceDto;
@@ -40,6 +41,7 @@ public class GeofenceService {
     @Transactional
     public GeofenceDto create(Long tenantId, Long userId, String username, GeofenceRequest request) {
         validate(tenantId, request);
+        validateUniqueName(tenantId, request.name(), null);
         Geofence geofence = new Geofence();
         geofence.setTenantId(tenantId);
         apply(geofence, request);
@@ -55,6 +57,7 @@ public class GeofenceService {
         validate(tenantId, request);
         Geofence geofence = repository.findByIdAndTenantId(id, tenantId)
                 .orElseThrow(() -> new ResourceNotFoundException("Geofence not found"));
+        validateUniqueName(tenantId, request.name(), id);
         apply(geofence, request);
         geofence = repository.save(geofence);
         auditService.record(tenantId, userId, username, "UPDATE_GEOFENCE", "GEOFENCE",
@@ -124,6 +127,16 @@ public class GeofenceService {
             if (groupRepository.findByIdAndTenantId(groupId, tenantId).isEmpty()) {
                 throw new BadRequestException("Assigned group is not available for this tenant");
             }
+        }
+    }
+
+    private void validateUniqueName(Long tenantId, String name, Long currentId) {
+        String trimmed = name.trim();
+        boolean duplicate = currentId == null
+                ? repository.existsByTenantIdAndNameIgnoreCase(tenantId, trimmed)
+                : repository.existsByTenantIdAndNameIgnoreCaseAndIdNot(tenantId, trimmed, currentId);
+        if (duplicate) {
+            throw new DuplicateResourceException("A geofence with this name already exists");
         }
     }
 
