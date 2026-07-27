@@ -160,14 +160,26 @@ public class DeviceService {
                 stateOf(d, p),
                 p != null ? p.getLatitude() : null,
                 p != null ? p.getLongitude() : null,
-                p != null ? p.getSpeed() : 0,
+                reportedSpeed(d, p),
                 p != null ? p.getCourse() : 0,
                 p != null ? p.getIgnition() : null,
                 p != null && p.isGpsValid(),
                 p != null ? p.getAddress() : null,
                 p != null ? p.getServerTime() : null,
                 d.getExpiryDate(),
-                d.getStatus().name());
+                d.getStatus().name(),
+                d.isImmobilised(), d.isLocked(), d.getLastCommandType(), d.getLastCommandAt());
+    }
+
+    /**
+     * An immobilised vehicle cannot be moving, so the last reported speed is
+     * suppressed rather than shown alongside an IMMOBILISED state.
+     */
+    private double reportedSpeed(Device d, DeviceCurrentPosition p) {
+        if (d.isImmobilised() || d.isLocked()) {
+            return 0;
+        }
+        return p != null ? p.getSpeed() : 0;
     }
 
     private DeviceDetail toDetail(Device d, DeviceCurrentPosition p) {
@@ -181,11 +193,12 @@ public class DeviceService {
                 stateOf(d, p),
                 p != null ? p.getLatitude() : null,
                 p != null ? p.getLongitude() : null,
-                p != null ? p.getSpeed() : 0,
+                reportedSpeed(d, p),
                 p != null ? p.getCourse() : 0,
                 p != null ? p.getIgnition() : null,
                 p != null && p.isGpsValid(),
-                p != null ? p.getServerTime() : null);
+                p != null ? p.getServerTime() : null,
+                d.isImmobilised(), d.isLocked(), d.getLastCommandType(), d.getLastCommandAt());
     }
 
     private void apply(Device device, Long tenantId, DeviceUpsertRequest r) {
@@ -260,6 +273,11 @@ public class DeviceService {
         // never manually flipped to EXPIRED.
         if (DeviceExpiry.isExpired(d)) {
             return DeviceState.EXPIRED.name();
+        }
+        // Mirrors DeviceStateCalculator: a remotely cut or locked vehicle cannot
+        // be moving, so immobilisation outranks the last stored telemetry state.
+        if (d.isImmobilised() || d.isLocked()) {
+            return DeviceState.IMMOBILISED.name();
         }
         return p != null ? p.getState().name() : DeviceState.NO_DATA.name();
     }

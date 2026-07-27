@@ -112,6 +112,21 @@ public class Device {
     @Column(name = "ingest_token", length = 80)
     private String ingestToken;
 
+    /** Engine cut by an ENGINE_CUT command; cleared by ENGINE_RESTORE. */
+    @Column(nullable = false)
+    private boolean immobilised = false;
+
+    /** Locked by a LOCK command; cleared by UNLOCK. */
+    @Column(nullable = false)
+    private boolean locked = false;
+
+    /** Most recent command that changed immobilisation / lock state. */
+    @Column(name = "last_command_type", length = 32)
+    private String lastCommandType;
+
+    @Column(name = "last_command_at")
+    private Instant lastCommandAt;
+
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
 

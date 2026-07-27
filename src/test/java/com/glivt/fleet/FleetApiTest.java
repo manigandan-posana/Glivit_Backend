@@ -132,19 +132,24 @@ class FleetApiTest extends ApiTestSupport {
                 "idempotencyKey", "idem-1",
                 "confirmed", false);
 
-        mockMvc.perform(post("/api/commands")
+        // Identity sequences are not rolled back between test classes, so the
+        // assertion is that the SAME row comes back - not that its id is 1.
+        String first = mockMvc.perform(post("/api/commands")
                         .header("Authorization", "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(body)))
                 .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.data.id").value(1));
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+        long commandId = objectMapper.readTree(first).path("data").path("id").asLong();
 
         mockMvc.perform(post("/api/commands")
                         .header("Authorization", "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(body)))
                 .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.data.id").value(1));
+                .andExpect(jsonPath("$.data.id").value(commandId));
     }
 
     @Test

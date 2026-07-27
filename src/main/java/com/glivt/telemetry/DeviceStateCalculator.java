@@ -32,6 +32,13 @@ public class DeviceStateCalculator {
         if (DeviceExpiry.isExpired(device)) {
             return DeviceState.EXPIRED;
         }
+        // A remotely cut or locked vehicle cannot be moving, so immobilisation
+        // outranks whatever the last packet reported. It is checked after
+        // suspension/expiry (which are administrative and take priority) but
+        // before telemetry, so the fleet map never shows a cut vehicle running.
+        if (device.isImmobilised() || device.isLocked()) {
+            return DeviceState.IMMOBILISED;
+        }
         if (snapshot == null || snapshot.serverTime() == null) {
             return DeviceState.NO_DATA;
         }

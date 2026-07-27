@@ -33,5 +33,9 @@ public record DeviceDetail(
         double course,
         Boolean ignition,
         boolean gpsValid,
-        Instant lastUpdate) {
+        Instant lastUpdate,
+        boolean immobilised,
+        boolean locked,
+        String lastCommandType,
+        Instant lastCommandAt) {
 }

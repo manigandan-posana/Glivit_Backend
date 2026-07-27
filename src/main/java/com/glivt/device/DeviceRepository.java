@@ -91,6 +91,10 @@ public interface DeviceRepository extends JpaRepository<Device, Long> {
         String getTimezone();
 
         DeviceState getCurrentState();
+
+        boolean getImmobilised();
+
+        boolean getLocked();
     }
 
     /**
@@ -101,6 +105,8 @@ public interface DeviceRepository extends JpaRepository<Device, Long> {
             select d.status as status,
                    d.expiryDate as expiryDate,
                    d.timezone as timezone,
+                   d.immobilised as immobilised,
+                   d.locked as locked,
                    cp.state as currentState
             from Device d
             left join DeviceCurrentPosition cp on cp.deviceId = d.id

@@ -49,6 +49,11 @@ public class DashboardService {
         if (DeviceExpiry.isExpired(row.getStatus(), row.getExpiryDate(), row.getTimezone())) {
             return DeviceState.EXPIRED;
         }
+        // Same precedence as DeviceService.stateOf / DeviceStateCalculator, so a
+        // cut vehicle is never counted as running on the dashboard.
+        if (row.getImmobilised() || row.getLocked()) {
+            return DeviceState.IMMOBILISED;
+        }
         return row.getCurrentState() != null ? row.getCurrentState() : DeviceState.NO_DATA;
     }
 }

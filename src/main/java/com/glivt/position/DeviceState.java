@@ -27,6 +27,8 @@ public enum DeviceState {
     POWER_DISCONNECTED,
     /** Subscription / device expiry date has passed. */
     EXPIRED,
+    /** Engine cut or vehicle locked by a remote command. */
+    IMMOBILISED,
     /** Administratively suspended. */
     SUSPENDED
 }

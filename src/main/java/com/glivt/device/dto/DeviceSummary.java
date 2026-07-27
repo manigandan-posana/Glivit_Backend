@@ -20,5 +20,9 @@ public record DeviceSummary(
         String address,
         Instant lastUpdate,
         LocalDate expiryDate,
-        String status) {
+        String status,
+        boolean immobilised,
+        boolean locked,
+        String lastCommandType,
+        Instant lastCommandAt) {
 }
