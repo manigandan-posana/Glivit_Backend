@@ -12,6 +12,12 @@ public interface DriverRepository extends JpaRepository<Driver, Long> {
 
     Optional<Driver> findByIdAndTenantId(Long id, Long tenantId);
 
+    /**
+     * The driver record backing a user login. Driver accounts are created through
+     * the Users module (role = DRIVER), which keeps exactly one record per login.
+     */
+    Optional<Driver> findFirstByTenantIdAndUserId(Long tenantId, Long userId);
+
     /** Driver record ids linked to a user login (usually one, but modelled as many). */
     @Query("select d.id from Driver d where d.tenantId = :tenantId and d.userId = :userId")
     List<Long> driverIdsForUser(@Param("tenantId") Long tenantId, @Param("userId") Long userId);
