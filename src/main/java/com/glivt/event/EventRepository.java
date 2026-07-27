@@ -1,6 +1,7 @@
 package com.glivt.event;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -11,6 +12,9 @@ import org.springframework.data.repository.query.Param;
 public interface EventRepository extends JpaRepository<Event, Long> {
 
     Optional<Event> findByIdAndTenantId(Long id, Long tenantId);
+
+    List<Event> findByTenantIdAndDeviceIdAndServerTimeBetweenOrderByServerTimeAsc(
+            Long tenantId, Long deviceId, Instant from, Instant to);
 
     @Query("""
             select e from Event e

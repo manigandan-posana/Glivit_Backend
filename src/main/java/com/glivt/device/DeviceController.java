@@ -69,6 +69,9 @@ public class DeviceController {
         return ApiResponse.ok(deviceService.get(currentUser.tenantId(), id));
     }
 
+    // Playback lives on PositionController (GET /api/devices/{deviceId}/playback);
+    // it enforces device-assignment scope as well as the permission.
+
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     @Operation(summary = "Create a GPS device and optional vehicle assignment")

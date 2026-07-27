@@ -99,6 +99,22 @@ public class GeofenceService {
         if ("CIRCLE".equals(type) && (request.radiusMeters() == null || request.radiusMeters() <= 0)) {
             throw new BadRequestException("Circle geofence requires radiusMeters");
         }
+        if ("CIRCLE".equals(type) && request.radiusMeters() > 100_000) {
+            throw new BadRequestException("Circle geofence radius is too large");
+        }
+        for (List<Double> coordinate : request.coordinates()) {
+            if (coordinate == null || coordinate.size() < 2
+                    || coordinate.get(0) == null || coordinate.get(1) == null) {
+                throw new BadRequestException("Geofence coordinates are invalid");
+            }
+            double longitude = coordinate.get(0);
+            double latitude = coordinate.get(1);
+            if (!Double.isFinite(longitude) || !Double.isFinite(latitude)
+                    || longitude < -180 || longitude > 180
+                    || latitude < -90 || latitude > 90) {
+                throw new BadRequestException("Geofence coordinates are out of range");
+            }
+        }
         for (Long deviceId : nullToEmpty(request.assignedDeviceIds())) {
             if (deviceRepository.findByIdAndTenantId(deviceId, tenantId).isEmpty()) {
                 throw new BadRequestException("Assigned device is not available for this tenant");

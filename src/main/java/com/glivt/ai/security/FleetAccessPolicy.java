@@ -17,7 +17,9 @@ import org.springframework.stereotype.Component;
  * as "not found" rather than "forbidden" so ids cannot be enumerated across
  * tenants.
  */
-@Component
+// Explicitly named: com.glivt.access.FleetAccessPolicy is a different policy
+// (fleet scoping) and would otherwise claim the same derived bean name.
+@Component("aiFleetAccessPolicy")
 public class FleetAccessPolicy {
 
     private final VehicleRepository vehicleRepository;
