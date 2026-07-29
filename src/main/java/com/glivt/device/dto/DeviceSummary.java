@@ -10,6 +10,7 @@ public record DeviceSummary(
         String imei,
         String category,
         Long vehicleId,
+        String vehicleName,
         String state,
         Double latitude,
         Double longitude,

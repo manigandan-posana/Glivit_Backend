@@ -154,9 +154,26 @@ public class DeviceService {
                 String.valueOf(device.getId()), "SUCCESS", "Soft deleted");
     }
 
+    private String resolveVehicleName(Device d) {
+        if (d.getVehicleId() != null) {
+            var v = vehicleRepository.findByIdAndTenantId(d.getVehicleId(), d.getTenantId());
+            if (v.isPresent() && v.get().getName() != null && !v.get().getName().isBlank()) {
+                return v.get().getName();
+            }
+        }
+        if (d.getDriverName() != null && !d.getDriverName().isBlank()) {
+            return d.getDriverName();
+        }
+        if (d.getModel() != null && !d.getModel().isBlank()) {
+            return d.getModel();
+        }
+        return d.getName();
+    }
+
     private DeviceSummary toSummary(Device d, DeviceCurrentPosition p) {
         return new DeviceSummary(
                 d.getId(), d.getName(), d.getImei(), d.getCategory(), d.getVehicleId(),
+                resolveVehicleName(d),
                 stateOf(d, p),
                 p != null ? p.getLatitude() : null,
                 p != null ? p.getLongitude() : null,
@@ -185,7 +202,7 @@ public class DeviceService {
     private DeviceDetail toDetail(Device d, DeviceCurrentPosition p) {
         return new DeviceDetail(
                 d.getId(), d.getName(), d.getImei(), d.getModel(), d.getCategory(),
-                d.getProjectId(), d.getGroupId(), d.getVehicleId(), d.getManagerId(),
+                d.getProjectId(), d.getGroupId(), d.getVehicleId(), resolveVehicleName(d), d.getManagerId(),
                 d.getSimNumber(), d.getSimProvider(), d.getSimApn(),
                 d.getDriverName(), d.getDriverPhone(), d.getAddress(), d.getRemarks(),
                 d.getExpiryDate(), d.getActivatedAt(), d.getTimezone(),

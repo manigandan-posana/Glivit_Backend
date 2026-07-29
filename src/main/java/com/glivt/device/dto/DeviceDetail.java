@@ -12,6 +12,7 @@ public record DeviceDetail(
         Long projectId,
         Long groupId,
         Long vehicleId,
+        String vehicleName,
         Long managerId,
         String simNumber,
         String simProvider,
