@@ -16,7 +16,9 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 @Entity
-@Table(name = "vehicles")
+// Vehicle registration numbers are unique WITHIN a tenant.
+@Table(name = "vehicles", uniqueConstraints = @jakarta.persistence.UniqueConstraint(
+        name = "uk_vehicles_tenant_registration", columnNames = {"tenant_id", "registration_number"}))
 @Getter
 @Setter
 @NoArgsConstructor

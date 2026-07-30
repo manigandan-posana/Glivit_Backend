@@ -9,5 +9,7 @@ public interface CommandRepository extends JpaRepository<DeviceCommand, Long> {
 
     Optional<DeviceCommand> findByTenantIdAndIdempotencyKey(Long tenantId, String idempotencyKey);
 
+    long countByTenantId(Long tenantId);
+
     Page<DeviceCommand> findByTenantIdOrderByRequestedAtDesc(Long tenantId, Pageable pageable);
 }

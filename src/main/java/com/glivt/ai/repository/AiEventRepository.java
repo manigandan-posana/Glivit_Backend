@@ -31,6 +31,8 @@ public interface AiEventRepository extends JpaRepository<AiEvent, Long> {
                                @Param("eventType") String eventType,
                                Pageable pageable);
 
+    long countByTenantId(Long tenantId);
+
     long countByTenantIdAndAcknowledgedFalse(Long tenantId);
 
     long countByTenantIdAndSeverityAndCreatedAtAfter(Long tenantId, String severity, Instant after);

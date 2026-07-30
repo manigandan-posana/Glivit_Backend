@@ -41,6 +41,16 @@ public class RefreshToken {
     @Column(name = "device_info", length = 256)
     private String deviceInfo;
 
+    /**
+     * Tenant this session was acting inside when the token was issued.
+     *
+     * <p>Without it, rotating a refresh token would silently drop the user back to
+     * their home tenant mid-session — the app would appear to switch tenants on its
+     * own the first time an access token expired.
+     */
+    @Column(name = "active_tenant_id")
+    private Long activeTenantId;
+
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
 

@@ -8,6 +8,8 @@ public interface DeviceGroupRepository extends JpaRepository<DeviceGroup, Long> 
 
     List<DeviceGroup> findByTenantId(Long tenantId);
 
+    long countByTenantId(Long tenantId);
+
     Optional<DeviceGroup> findByIdAndTenantId(Long id, Long tenantId);
 
     long countByTenantIdAndParentId(Long tenantId, Long parentId);

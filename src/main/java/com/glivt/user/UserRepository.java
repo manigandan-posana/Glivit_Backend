@@ -13,6 +13,10 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     Optional<User> findByIdAndTenantId(Long id, Long tenantId);
 
+    long countByTenantId(Long tenantId);
+
+    java.util.List<User> findByTenantId(Long tenantId);
+
     boolean existsByTenantIdAndUsernameIgnoreCase(Long tenantId, String username);
 
     boolean existsByTenantIdAndUsernameIgnoreCaseAndIdNot(Long tenantId, String username, Long id);

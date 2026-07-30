@@ -8,5 +8,7 @@ public interface ProjectRepository extends JpaRepository<Project, Long> {
 
     List<Project> findByTenantId(Long tenantId);
 
+    long countByTenantId(Long tenantId);
+
     Optional<Project> findByIdAndTenantId(Long id, Long tenantId);
 }

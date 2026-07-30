@@ -10,6 +10,8 @@ public interface DriverRepository extends JpaRepository<Driver, Long> {
 
     List<Driver> findByTenantId(Long tenantId);
 
+    long countByTenantId(Long tenantId);
+
     Optional<Driver> findByIdAndTenantId(Long id, Long tenantId);
 
     /**

@@ -21,7 +21,10 @@ import org.springframework.stereotype.Service;
 @Service
 public class JwtService {
 
+    /** Active tenant the token acts inside (changes when the user switches tenant). */
     public static final String CLAIM_TENANT = "tid";
+    /** Tenant that owns the login; never changes for a given user. */
+    public static final String CLAIM_HOME_TENANT = "htid";
     public static final String CLAIM_ROLE = "role";
     public static final String CLAIM_USERNAME = "usr";
     public static final String CLAIM_TYPE = "typ";
@@ -40,12 +43,25 @@ public class JwtService {
     }
 
     public String generateAccessToken(User user) {
+        return generateAccessToken(user, user.getTenantId());
+    }
+
+    /**
+     * Issues an access token bound to {@code activeTenantId}.
+     *
+     * <p>The tenant is a signed claim so the server never has to trust a tenant id
+     * from the request body. It is still re-authorised on every request (see
+     * {@link JwtAuthenticationFilter}) so revoking a tenant grant takes effect
+     * immediately instead of at token expiry.
+     */
+    public String generateAccessToken(User user, Long activeTenantId) {
         Instant now = Instant.now();
         Instant expiry = now.plus(properties.getAccessTokenTtlMinutes(), ChronoUnit.MINUTES);
         return Jwts.builder()
                 .issuer(properties.getIssuer())
                 .subject(String.valueOf(user.getId()))
-                .claim(CLAIM_TENANT, user.getTenantId())
+                .claim(CLAIM_TENANT, activeTenantId == null ? user.getTenantId() : activeTenantId)
+                .claim(CLAIM_HOME_TENANT, user.getTenantId())
                 .claim(CLAIM_ROLE, user.getRole().name())
                 .claim(CLAIM_USERNAME, user.getUsername())
                 .claim(CLAIM_TYPE, "access")

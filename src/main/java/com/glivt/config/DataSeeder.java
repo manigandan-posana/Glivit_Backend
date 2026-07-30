@@ -8,6 +8,8 @@ import com.glivt.position.DeviceCurrentPositionRepository;
 import com.glivt.position.DeviceState;
 import com.glivt.tenant.Tenant;
 import com.glivt.tenant.TenantRepository;
+import com.glivt.tenant.TenantUser;
+import com.glivt.tenant.TenantUserRepository;
 import com.glivt.user.Role;
 import com.glivt.user.User;
 import com.glivt.user.UserRepository;
@@ -38,17 +40,20 @@ public class DataSeeder implements CommandLineRunner {
     private static final String DEMO_PASSWORD = "Admin@12345";
 
     private final TenantRepository tenantRepository;
+    private final TenantUserRepository tenantUserRepository;
     private final UserRepository userRepository;
     private final VehicleRepository vehicleRepository;
     private final DeviceRepository deviceRepository;
     private final DeviceCurrentPositionRepository currentPositionRepository;
     private final PasswordEncoder passwordEncoder;
 
-    public DataSeeder(TenantRepository tenantRepository, UserRepository userRepository,
+    public DataSeeder(TenantRepository tenantRepository, TenantUserRepository tenantUserRepository,
+                      UserRepository userRepository,
                       VehicleRepository vehicleRepository, DeviceRepository deviceRepository,
                       DeviceCurrentPositionRepository currentPositionRepository,
                       PasswordEncoder passwordEncoder) {
         this.tenantRepository = tenantRepository;
+        this.tenantUserRepository = tenantUserRepository;
         this.userRepository = userRepository;
         this.vehicleRepository = vehicleRepository;
         this.deviceRepository = deviceRepository;
@@ -68,6 +73,10 @@ public class DataSeeder implements CommandLineRunner {
         Tenant tenant = new Tenant();
         tenant.setCompanyCode(DEMO_CODE);
         tenant.setName("Glivt Demo Fleet");
+        tenant.setCompanyName("Glivt Demo Logistics Pvt Ltd");
+        tenant.setAdminName("Demo Admin");
+        tenant.setAdminEmail("admin@example.com");
+        tenant.setAdminPhone("+910000000000");
         tenant.setAppName("Glivt Demo");
         tenant.setPrimaryColor("#27D34D");
         tenant.setSecondaryColor("#2A91BD");
@@ -80,6 +89,9 @@ public class DataSeeder implements CommandLineRunner {
         createUser(tenant.getId(), "superadmin", "Demo Super Admin", Role.SUPER_ADMIN);
         User admin = createUser(tenant.getId(), "admin", "Demo Admin", Role.ADMIN);
         createUser(tenant.getId(), "driver", "Demo Driver", Role.DRIVER);
+
+        tenant.setAdminUserId(admin.getId());
+        tenant = tenantRepository.save(tenant);
 
         seedVehicle(tenant.getId(), admin.getId(), "TN20CM7677", VehicleCategory.CAR,
                 DeviceState.RUNNING, 12.9718, 77.5946, 46, "864000000000001");
@@ -102,7 +114,11 @@ public class DataSeeder implements CommandLineRunner {
         user.setEmail(username + "@example.com");
         user.setRole(role);
         user.setPasswordHash(passwordEncoder.encode(DEMO_PASSWORD));
-        return userRepository.save(user);
+        user = userRepository.save(user);
+        // Home-tenant access grant. Every login needs one; multi-tenant access is
+        // granted by adding further rows (or by holding the SUPER_ADMIN role).
+        tenantUserRepository.save(TenantUser.grant(tenantId, user.getId(), true, null));
+        return user;
     }
 
     private void seedVehicle(Long tenantId, Long managerId, String registration,

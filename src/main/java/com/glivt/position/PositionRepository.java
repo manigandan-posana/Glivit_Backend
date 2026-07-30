@@ -14,6 +14,8 @@ public interface PositionRepository extends JpaRepository<Position, Long> {
     /** Idempotency guard for telemetry ingestion. */
     boolean existsByDeviceIdAndDedupKey(Long deviceId, String dedupKey);
 
+    long countByTenantId(Long tenantId);
+
     /** Paginated, newest-first history window for a device (tenant-scoped). */
     Page<Position> findByTenantIdAndDeviceIdAndDeviceTimeBetween(
             Long tenantId, Long deviceId, Instant from, Instant to, Pageable pageable);

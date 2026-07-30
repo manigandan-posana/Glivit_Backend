@@ -7,6 +7,8 @@ import com.glivt.common.exception.DuplicateResourceException;
 import com.glivt.common.exception.ResourceNotFoundException;
 import com.glivt.driver.Driver;
 import com.glivt.driver.DriverRepository;
+import com.glivt.tenant.TenantUser;
+import com.glivt.tenant.TenantUserRepository;
 import com.glivt.user.dto.UserDto;
 import com.glivt.user.dto.UserUpsertRequest;
 import org.springframework.data.domain.Pageable;
@@ -20,14 +22,17 @@ public class UserService {
 
     private final UserRepository repository;
     private final DriverRepository driverRepository;
+    private final TenantUserRepository tenantUserRepository;
     private final PasswordEncoder passwordEncoder;
     private final AuditService auditService;
     private final JsonMapper jsonMapper = new JsonMapper();
 
     public UserService(UserRepository repository, DriverRepository driverRepository,
+                       TenantUserRepository tenantUserRepository,
                        PasswordEncoder passwordEncoder, AuditService auditService) {
         this.repository = repository;
         this.driverRepository = driverRepository;
+        this.tenantUserRepository = tenantUserRepository;
         this.passwordEncoder = passwordEncoder;
         this.auditService = auditService;
     }
@@ -52,6 +57,12 @@ public class UserService {
         apply(user, request);
         user.setPasswordHash(passwordEncoder.encode(request.password()));
         user = repository.save(user);
+        // Home-tenant access grant. Without it the user could still sign in (the
+        // home tenant needs no grant) but would have no entry in the tenant access
+        // map, so the Manage Tenants list would be empty for them.
+        if (!tenantUserRepository.existsByUserIdAndTenantId(user.getId(), tenantId)) {
+            tenantUserRepository.save(TenantUser.grant(tenantId, user.getId(), true, actorId));
+        }
         syncDriverRecord(user);
         auditService.record(tenantId, actorId, actorUsername, "CREATE_USER", "USER",
                 String.valueOf(user.getId()), "SUCCESS",

@@ -7,6 +7,9 @@ import com.glivt.position.DeviceCurrentPositionRepository;
 import com.glivt.position.DeviceState;
 import com.glivt.tenant.Tenant;
 import com.glivt.tenant.TenantRepository;
+import com.glivt.tenant.TenantStatus;
+import com.glivt.tenant.TenantUser;
+import com.glivt.tenant.TenantUserRepository;
 import com.glivt.user.Role;
 import com.glivt.user.User;
 import com.glivt.user.UserRepository;
@@ -35,16 +38,26 @@ public abstract class ApiTestSupport {
     @Autowired protected MockMvc mockMvc;
     @Autowired protected ObjectMapper objectMapper;
     @Autowired protected TenantRepository tenantRepository;
+    @Autowired protected TenantUserRepository tenantUserRepository;
     @Autowired protected UserRepository userRepository;
     @Autowired protected DeviceRepository deviceRepository;
     @Autowired protected DeviceCurrentPositionRepository currentPositionRepository;
     @Autowired protected PasswordEncoder passwordEncoder;
 
     protected Tenant seedTenant(String code) {
+        return seedTenant(code, TenantStatus.ACTIVE);
+    }
+
+    protected Tenant seedTenant(String code, TenantStatus status) {
         Tenant tenant = new Tenant();
         tenant.setCompanyCode(code);
         tenant.setName(code + " Fleet");
+        tenant.setCompanyName(code + " Logistics");
         tenant.setAppName(code + " App");
+        tenant.setAdminEmail("admin@" + code.toLowerCase(java.util.Locale.ROOT) + ".test");
+        tenant.setAdminName(code + " Admin");
+        tenant.setAdminPhone("+911234567890");
+        tenant.setStatus(status);
         return tenantRepository.save(tenant);
     }
 
@@ -55,7 +68,15 @@ public abstract class ApiTestSupport {
         user.setName(username);
         user.setRole(role);
         user.setPasswordHash(passwordEncoder.encode(PASSWORD));
-        return userRepository.save(user);
+        user = userRepository.save(user);
+        // Mirrors production: every login gets its home-tenant access grant.
+        tenantUserRepository.save(TenantUser.grant(tenantId, user.getId(), true, null));
+        return user;
+    }
+
+    /** Grants a user explicit access to a tenant other than their own. */
+    protected void grantTenantAccess(Long tenantId, Long userId) {
+        tenantUserRepository.save(TenantUser.grant(tenantId, userId, false, null));
     }
 
     protected Device seedDevice(Long tenantId, String imei, DeviceState state) {
@@ -80,17 +101,27 @@ public abstract class ApiTestSupport {
     }
 
     protected JsonNode login(String companyCode, String username) throws Exception {
+        return login(companyCode, username, PASSWORD);
+    }
+
+    protected JsonNode login(String companyCode, String username, String password) throws Exception {
         MvcResult result = mockMvc.perform(post("/api/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(Map.of(
                                 "companyCode", companyCode,
                                 "username", username,
-                                "password", PASSWORD))))
+                                "password", password))))
                 .andReturn();
         return objectMapper.readTree(result.getResponse().getContentAsString());
     }
 
     protected String accessToken(String companyCode, String username) throws Exception {
         return login(companyCode, username).path("data").path("accessToken").asString();
+    }
+
+    /** Login helper for accounts provisioned with a password other than {@link #PASSWORD}. */
+    protected String accessToken(String companyCode, String username, String password)
+            throws Exception {
+        return login(companyCode, username, password).path("data").path("accessToken").asString();
     }
 }

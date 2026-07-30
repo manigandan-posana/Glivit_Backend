@@ -23,7 +23,8 @@ public class TenantService {
         return toConfig(tenant);
     }
 
-    private TenantConfigResponse toConfig(Tenant tenant) {
+    /** White-label configuration for an already-resolved tenant. */
+    public TenantConfigResponse toConfig(Tenant tenant) {
         return new TenantConfigResponse(
                 tenant.getCompanyCode(),
                 tenant.getName(),

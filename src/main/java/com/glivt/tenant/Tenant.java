@@ -14,7 +14,10 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 @Entity
-@Table(name = "tenants")
+@Table(name = "tenants", uniqueConstraints = {
+        @jakarta.persistence.UniqueConstraint(name = "uk_tenants_name", columnNames = "name"),
+        @jakarta.persistence.UniqueConstraint(name = "uk_tenants_admin_email", columnNames = "admin_email")
+})
 @Getter
 @Setter
 @NoArgsConstructor
@@ -24,11 +27,29 @@ public class Tenant {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    /** The tenant's stable public identifier; used as the login company code. */
     @Column(name = "company_code", nullable = false, unique = true, length = 64)
     private String companyCode;
 
     @Column(nullable = false, length = 160)
     private String name;
+
+    /** Legal / registered company the tenant belongs to. Not always the tenant name. */
+    @Column(name = "company_name", nullable = false, length = 160)
+    private String companyName;
+
+    @Column(name = "admin_name", length = 160)
+    private String adminName;
+
+    @Column(name = "admin_email", length = 160)
+    private String adminEmail;
+
+    @Column(name = "admin_phone", length = 32)
+    private String adminPhone;
+
+    /** The tenant administrator account provisioned with the tenant. */
+    @Column(name = "admin_user_id")
+    private Long adminUserId;
 
     @Column(name = "app_name", nullable = false, length = 120)
     private String appName;

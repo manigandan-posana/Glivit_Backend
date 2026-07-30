@@ -9,5 +9,7 @@ public interface ReportRepository extends JpaRepository<ReportJob, Long> {
 
     Optional<ReportJob> findByIdAndTenantId(Long id, Long tenantId);
 
+    long countByTenantId(Long tenantId);
+
     Page<ReportJob> findByTenantIdOrderByCreatedAtDesc(Long tenantId, Pageable pageable);
 }

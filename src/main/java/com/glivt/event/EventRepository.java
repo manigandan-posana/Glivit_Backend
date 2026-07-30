@@ -13,6 +13,8 @@ public interface EventRepository extends JpaRepository<Event, Long> {
 
     Optional<Event> findByIdAndTenantId(Long id, Long tenantId);
 
+    long countByTenantId(Long tenantId);
+
     List<Event> findByTenantIdAndDeviceIdAndServerTimeBetweenOrderByServerTimeAsc(
             Long tenantId, Long deviceId, Instant from, Instant to);
 

@@ -14,6 +14,8 @@ public interface DeviceRepository extends JpaRepository<Device, Long> {
 
     Optional<Device> findByIdAndTenantId(Long id, Long tenantId);
 
+    long countByTenantId(Long tenantId);
+
     /** Ingestion lookup: devices authenticate by IMEI, then the token is verified. */
     Optional<Device> findByImei(String imei);
 

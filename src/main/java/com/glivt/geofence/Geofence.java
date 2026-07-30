@@ -14,7 +14,10 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 @Entity
-@Table(name = "geofences")
+// Geofence names are unique WITHIN a tenant, so two tenants may each own a
+// geofence called "Depot" without either being able to see the other's.
+@Table(name = "geofences", uniqueConstraints = @jakarta.persistence.UniqueConstraint(
+        name = "uk_geofences_tenant_name", columnNames = {"tenant_id", "name"}))
 @Getter
 @Setter
 @NoArgsConstructor
