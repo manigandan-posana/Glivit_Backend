@@ -58,7 +58,7 @@ public class UserController {
 
     @PutMapping("/{id}")
     public ApiResponse<UserDto> update(@PathVariable Long id,
-                                       @Valid @RequestBody UserUpsertRequest request) {
+            @Valid @RequestBody UserUpsertRequest request) {
         currentUser.requirePermission(PermissionKeys.MANAGE_USERS);
         var user = currentUser.require();
         return ApiResponse.ok(service.update(user.getTenantId(), user.getUserId(), user.getUsername(), id, request));

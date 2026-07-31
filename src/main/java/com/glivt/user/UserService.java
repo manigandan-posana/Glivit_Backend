@@ -28,8 +28,8 @@ public class UserService {
     private final JsonMapper jsonMapper = new JsonMapper();
 
     public UserService(UserRepository repository, DriverRepository driverRepository,
-                       TenantUserRepository tenantUserRepository,
-                       PasswordEncoder passwordEncoder, AuditService auditService) {
+            TenantUserRepository tenantUserRepository,
+            PasswordEncoder passwordEncoder, AuditService auditService) {
         this.repository = repository;
         this.driverRepository = driverRepository;
         this.tenantUserRepository = tenantUserRepository;
@@ -72,7 +72,7 @@ public class UserService {
 
     @Transactional
     public UserDto update(Long tenantId, Long actorId, String actorUsername, Long id,
-                          UserUpsertRequest request) {
+            UserUpsertRequest request) {
         User user = repository.findByIdAndTenantId(id, tenantId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
         if (repository.existsByTenantIdAndUsernameIgnoreCaseAndIdNot(

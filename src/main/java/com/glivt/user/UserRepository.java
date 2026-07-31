@@ -9,27 +9,27 @@ import org.springframework.data.repository.query.Param;
 
 public interface UserRepository extends JpaRepository<User, Long> {
 
-    Optional<User> findByTenantIdAndUsernameIgnoreCase(Long tenantId, String username);
+  Optional<User> findByTenantIdAndUsernameIgnoreCase(Long tenantId, String username);
 
-    Optional<User> findByIdAndTenantId(Long id, Long tenantId);
+  Optional<User> findByIdAndTenantId(Long id, Long tenantId);
 
-    long countByTenantId(Long tenantId);
+  long countByTenantId(Long tenantId);
 
-    java.util.List<User> findByTenantId(Long tenantId);
+  java.util.List<User> findByTenantId(Long tenantId);
 
-    boolean existsByTenantIdAndUsernameIgnoreCase(Long tenantId, String username);
+  boolean existsByTenantIdAndUsernameIgnoreCase(Long tenantId, String username);
 
-    boolean existsByTenantIdAndUsernameIgnoreCaseAndIdNot(Long tenantId, String username, Long id);
+  boolean existsByTenantIdAndUsernameIgnoreCaseAndIdNot(Long tenantId, String username, Long id);
 
-    @Query("""
-            select u from User u
-            where u.tenantId = :tenantId
-              and (:search is null
-                   or lower(u.name) like lower(concat('%', :search, '%'))
-                   or lower(u.username) like lower(concat('%', :search, '%'))
-                   or lower(u.email) like lower(concat('%', :search, '%')))
-            """)
-    Page<User> search(@Param("tenantId") Long tenantId,
-                      @Param("search") String search,
-                      Pageable pageable);
+  @Query("""
+      select u from User u
+      where u.tenantId = :tenantId
+        and (:search is null
+             or lower(u.name) like lower(concat('%', :search, '%'))
+             or lower(u.username) like lower(concat('%', :search, '%'))
+             or lower(u.email) like lower(concat('%', :search, '%')))
+      """)
+  Page<User> search(@Param("tenantId") Long tenantId,
+      @Param("search") String search,
+      Pageable pageable);
 }

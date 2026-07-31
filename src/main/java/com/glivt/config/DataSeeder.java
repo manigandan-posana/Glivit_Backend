@@ -48,10 +48,10 @@ public class DataSeeder implements CommandLineRunner {
     private final PasswordEncoder passwordEncoder;
 
     public DataSeeder(TenantRepository tenantRepository, TenantUserRepository tenantUserRepository,
-                      UserRepository userRepository,
-                      VehicleRepository vehicleRepository, DeviceRepository deviceRepository,
-                      DeviceCurrentPositionRepository currentPositionRepository,
-                      PasswordEncoder passwordEncoder) {
+            UserRepository userRepository,
+            VehicleRepository vehicleRepository, DeviceRepository deviceRepository,
+            DeviceCurrentPositionRepository currentPositionRepository,
+            PasswordEncoder passwordEncoder) {
         this.tenantRepository = tenantRepository;
         this.tenantUserRepository = tenantUserRepository;
         this.userRepository = userRepository;
@@ -122,8 +122,8 @@ public class DataSeeder implements CommandLineRunner {
     }
 
     private void seedVehicle(Long tenantId, Long managerId, String registration,
-                             VehicleCategory category, DeviceState state,
-                             double lat, double lng, double speed, String imei) {
+            VehicleCategory category, DeviceState state,
+            double lat, double lng, double speed, String imei) {
         Vehicle vehicle = new Vehicle();
         vehicle.setTenantId(tenantId);
         vehicle.setName(registration);

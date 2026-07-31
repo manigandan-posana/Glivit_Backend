@@ -34,8 +34,7 @@ public class AuthService {
     public static final String ACTION_SWITCH_TENANT = "SWITCH_TENANT";
 
     // Constant-time-ish decoy so a missing user costs the same as a wrong password.
-    private static final String DECOY_HASH =
-            "$2a$10$7EqJtq98hPqEX7fNZaFWoOa8f7f0f5cM2rXwZ1oS9v3o2p0N1kQe6";
+    private static final String DECOY_HASH = "$2a$10$7EqJtq98hPqEX7fNZaFWoOa8f7f0f5cM2rXwZ1oS9v3o2p0N1kQe6";
 
     private final TenantRepository tenantRepository;
     private final TenantAccessService tenantAccessService;
@@ -57,10 +56,10 @@ public class AuthService {
     private int loginWindowMinutes;
 
     public AuthService(TenantRepository tenantRepository, TenantAccessService tenantAccessService,
-                       UserRepository userRepository,
-                       RefreshTokenRepository refreshTokenRepository, PasswordEncoder passwordEncoder,
-                       JwtService jwtService, JwtProperties jwtProperties, RateLimiter rateLimiter,
-                       AuditService auditService) {
+            UserRepository userRepository,
+            RefreshTokenRepository refreshTokenRepository, PasswordEncoder passwordEncoder,
+            JwtService jwtService, JwtProperties jwtProperties, RateLimiter rateLimiter,
+            AuditService auditService) {
         this.tenantRepository = tenantRepository;
         this.tenantAccessService = tenantAccessService;
         this.userRepository = userRepository;
@@ -180,7 +179,8 @@ public class AuthService {
     /**
      * Issues a session bound to a different active tenant.
      *
-     * <p>The tenant must already have been authorised by the caller
+     * <p>
+     * The tenant must already have been authorised by the caller
      * ({@code TenantAccessService#requireAccess}); this method only mints the
      * session. Existing refresh tokens are revoked so the previous tenant's session
      * cannot be refreshed back into life alongside the new one - one device, one
@@ -197,7 +197,10 @@ public class AuthService {
         return issueTokens(user, null, deviceInfo);
     }
 
-    /** @param activeTenant the tenant the new session acts inside; null = the user's own. */
+    /**
+     * @param activeTenant the tenant the new session acts inside; null = the user's
+     *                     own.
+     */
     private TokenResponse issueTokens(User user, Tenant activeTenant, String deviceInfo) {
         Tenant tenant = activeTenant != null
                 ? activeTenant
