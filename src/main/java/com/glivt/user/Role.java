@@ -8,5 +8,7 @@ package com.glivt.user;
 public enum Role {
     SUPER_ADMIN,
     ADMIN,
+    TENANT_ADMIN,
+    COMPANY_USER,
     DRIVER
 }
