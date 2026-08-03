@@ -28,6 +28,10 @@ public class SecurityConfig {
 
     private static final String[] PUBLIC_PATHS = {
             "/api/auth/login",
+            "/api/auth/demo/super-admin",
+            "/api/auth/demo/admin",
+            "/api/auth/demo/driver",
+            "/api/auth/demo-login",
             "/api/auth/refresh",
             "/api/telemetry/positions",
             "/api/telemetry/batch",
@@ -49,8 +53,8 @@ public class SecurityConfig {
     private List<String> allowedOrigins;
 
     public SecurityConfig(JwtAuthenticationFilter jwtAuthenticationFilter,
-                          RestAuthenticationEntryPoint authenticationEntryPoint,
-                          RestAccessDeniedHandler accessDeniedHandler) {
+            RestAuthenticationEntryPoint authenticationEntryPoint,
+            RestAccessDeniedHandler accessDeniedHandler) {
         this.jwtAuthenticationFilter = jwtAuthenticationFilter;
         this.authenticationEntryPoint = authenticationEntryPoint;
         this.accessDeniedHandler = accessDeniedHandler;

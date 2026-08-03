@@ -17,6 +17,7 @@ public record DeviceUpsertRequest(
         Long groupId,
         Long vehicleId,
         Long managerId,
+        Long driverId,
         @Size(max = 160) String driverName,
         @Pattern(regexp = "^[+0-9 ()-]{0,32}$", message = "Invalid phone number")
         String driverPhone,
@@ -28,5 +29,7 @@ public record DeviceUpsertRequest(
         LocalDate activatedAt,
         @Size(max = 64) String timezone,
         @Size(max = 8) String distanceUnit,
-        @Size(max = 8) String speedUnit) {
+        @Size(max = 8) String speedUnit,
+        @Size(max = 32) String status) {
 }
+

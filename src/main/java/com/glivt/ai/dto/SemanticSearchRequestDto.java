@@ -13,5 +13,6 @@ import lombok.NoArgsConstructor;
 public class SemanticSearchRequestDto {
     @NotBlank
     private String query;
+    @Builder.Default
     private int limit = 10;
 }

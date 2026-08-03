@@ -8,6 +8,7 @@ import com.glivt.common.exception.ResourceNotFoundException;
 import com.glivt.device.dto.DeviceDetail;
 import com.glivt.device.dto.DeviceSummary;
 import com.glivt.device.dto.DeviceUpsertRequest;
+import com.glivt.driver.DriverRepository;
 import com.glivt.group.DeviceGroupRepository;
 import com.glivt.position.DeviceCurrentPosition;
 import com.glivt.position.DeviceCurrentPositionRepository;
@@ -33,6 +34,7 @@ public class DeviceService {
     private final DeviceGroupRepository groupRepository;
     private final VehicleRepository vehicleRepository;
     private final UserRepository userRepository;
+    private final DriverRepository driverRepository;
     private final AuditService auditService;
 
     public DeviceService(DeviceRepository deviceRepository,
@@ -41,6 +43,7 @@ public class DeviceService {
                          DeviceGroupRepository groupRepository,
                          VehicleRepository vehicleRepository,
                          UserRepository userRepository,
+                         DriverRepository driverRepository,
                          AuditService auditService) {
         this.deviceRepository = deviceRepository;
         this.currentPositionRepository = currentPositionRepository;
@@ -48,6 +51,7 @@ public class DeviceService {
         this.groupRepository = groupRepository;
         this.vehicleRepository = vehicleRepository;
         this.userRepository = userRepository;
+        this.driverRepository = driverRepository;
         this.auditService = auditService;
     }
 
@@ -147,11 +151,17 @@ public class DeviceService {
     public void suspend(Long tenantId, Long userId, String username, Long deviceId) {
         Device device = deviceRepository.findByIdAndTenantId(deviceId, tenantId)
                 .orElseThrow(() -> new ResourceNotFoundException("Device not found"));
-        device.setStatus(DeviceStatus.SUSPENDED);
-        device.setVehicleId(null);
-        deviceRepository.save(device);
-        auditService.record(tenantId, userId, username, "DELETE_DEVICE", "DEVICE",
-                String.valueOf(device.getId()), "SUCCESS", "Soft deleted");
+        if (device.getStatus() == DeviceStatus.SUSPENDED) {
+            deviceRepository.delete(device);
+            auditService.record(tenantId, userId, username, "HARD_DELETE_DEVICE", "DEVICE",
+                    String.valueOf(deviceId), "SUCCESS", "Permanently deleted");
+        } else {
+            device.setStatus(DeviceStatus.SUSPENDED);
+            device.setVehicleId(null);
+            deviceRepository.save(device);
+            auditService.record(tenantId, userId, username, "DELETE_DEVICE", "DEVICE",
+                    String.valueOf(device.getId()), "SUCCESS", "Soft deleted");
+        }
     }
 
     private String resolveVehicleName(Device d) {
@@ -202,7 +212,7 @@ public class DeviceService {
     private DeviceDetail toDetail(Device d, DeviceCurrentPosition p) {
         return new DeviceDetail(
                 d.getId(), d.getName(), d.getImei(), d.getModel(), d.getCategory(),
-                d.getProjectId(), d.getGroupId(), d.getVehicleId(), resolveVehicleName(d), d.getManagerId(),
+                d.getProjectId(), d.getGroupId(), d.getVehicleId(), resolveVehicleName(d), d.getManagerId(), d.getDriverId(),
                 d.getSimNumber(), d.getSimProvider(), d.getSimApn(),
                 d.getDriverName(), d.getDriverPhone(), d.getAddress(), d.getRemarks(),
                 d.getExpiryDate(), d.getActivatedAt(), d.getTimezone(),
@@ -230,6 +240,7 @@ public class DeviceService {
         device.setGroupId(r.groupId());
         device.setVehicleId(r.vehicleId());
         device.setManagerId(r.managerId());
+        device.setDriverId(r.driverId());
         device.setDriverName(blankToNull(r.driverName()));
         device.setDriverPhone(blankToNull(r.driverPhone()));
         device.setRemarks(blankToNull(r.remarks()));
@@ -241,7 +252,11 @@ public class DeviceService {
         device.setTimezone(blankToDefault(r.timezone(), "Asia/Kolkata"));
         device.setDistanceUnit(blankToDefault(r.distanceUnit(), "KM"));
         device.setSpeedUnit(blankToDefault(r.speedUnit(), "KMH"));
-        if (device.getStatus() == null) {
+        if (r.status() != null && !r.status().isBlank()) {
+            try {
+                device.setStatus(DeviceStatus.valueOf(r.status().trim().toUpperCase()));
+            } catch (IllegalArgumentException ignored) {}
+        } else if (device.getStatus() == null) {
             device.setStatus(DeviceStatus.ACTIVE);
         }
     }
@@ -259,6 +274,13 @@ public class DeviceService {
         }
         if (r.managerId() != null && userRepository.findByIdAndTenantId(r.managerId(), tenantId).isEmpty()) {
             throw new BadRequestException("Manager is not available for this tenant");
+        }
+        if (r.driverId() != null) {
+            boolean validDriver = driverRepository.findByIdAndTenantId(r.driverId(), tenantId).isPresent()
+                    || userRepository.findByIdAndTenantId(r.driverId(), tenantId).filter(u -> u.getRole() == com.glivt.user.Role.DRIVER).isPresent();
+            if (!validDriver) {
+                throw new BadRequestException("Driver is not available for this tenant");
+            }
         }
         if (r.vehicleId() != null) {
             if (vehicleRepository.findByIdAndTenantId(r.vehicleId(), tenantId).isEmpty()) {

@@ -42,6 +42,9 @@ public class Device {
     @Column(name = "manager_id")
     private Long managerId;
 
+    @Column(name = "driver_id")
+    private Long driverId;
+
     @Column(nullable = false, unique = true, length = 64)
     private String imei;
 

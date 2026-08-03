@@ -13,6 +13,7 @@ import com.glivt.tenant.TenantUserRepository;
 import com.glivt.user.Role;
 import com.glivt.user.User;
 import com.glivt.user.UserRepository;
+import com.glivt.user.UserStatus;
 import com.glivt.vehicle.Vehicle;
 import com.glivt.vehicle.VehicleCategory;
 import com.glivt.vehicle.VehicleRepository;
@@ -64,46 +65,64 @@ public class DataSeeder implements CommandLineRunner {
     @Override
     @Transactional
     public void run(String... args) {
-        if (tenantRepository.findByCompanyCodeIgnoreCase(DEMO_CODE).isPresent()) {
-            log.info("Demo tenant already present; skipping seed.");
-            return;
+        log.info("Verifying DEMO tenant and demo Super Admin account (app.seed-demo=true).");
+
+        Tenant tenant = tenantRepository.findByCompanyCodeIgnoreCase(DEMO_CODE).orElse(null);
+        if (tenant == null) {
+            log.info("Creating DEMO tenant and fleet.");
+            tenant = new Tenant();
+            tenant.setCompanyCode(DEMO_CODE);
+            tenant.setName("Glivt Demo Fleet");
+            tenant.setCompanyName("Glivt Demo Logistics Pvt Ltd");
+            tenant.setAdminName("Demo Admin");
+            tenant.setAdminEmail("admin@example.com");
+            tenant.setAdminPhone("+910000000000");
+            tenant.setAppName("Glivt Demo");
+            tenant.setPrimaryColor("#27D34D");
+            tenant.setSecondaryColor("#2A91BD");
+            tenant.setSupportPhone("+910000000000");
+            tenant.setSupportEmail("support@example.com");
+            tenant.setEnabledModules("dashboard,map,reports,geofences,notifications");
+            tenant.setMaxHistoryDays(90);
+            tenant = tenantRepository.save(tenant);
         }
-        log.info("Seeding DEMO tenant and fleet (app.seed-demo=true).");
 
-        Tenant tenant = new Tenant();
-        tenant.setCompanyCode(DEMO_CODE);
-        tenant.setName("Glivt Demo Fleet");
-        tenant.setCompanyName("Glivt Demo Logistics Pvt Ltd");
-        tenant.setAdminName("Demo Admin");
-        tenant.setAdminEmail("admin@example.com");
-        tenant.setAdminPhone("+910000000000");
-        tenant.setAppName("Glivt Demo");
-        tenant.setPrimaryColor("#27D34D");
-        tenant.setSecondaryColor("#2A91BD");
-        tenant.setSupportPhone("+910000000000");
-        tenant.setSupportEmail("support@example.com");
-        tenant.setEnabledModules("dashboard,map,reports,geofences,notifications");
-        tenant.setMaxHistoryDays(90);
-        tenant = tenantRepository.save(tenant);
+        User superAdmin = userRepository.findByTenantIdAndUsernameIgnoreCase(tenant.getId(), "superadmin").orElse(null);
+        if (superAdmin == null) {
+            superAdmin = createUser(tenant.getId(), "superadmin", "Demo Super Admin", Role.SUPER_ADMIN);
+        } else if (superAdmin.getRole() != Role.SUPER_ADMIN || superAdmin.getStatus() != UserStatus.ACTIVE) {
+            superAdmin.setRole(Role.SUPER_ADMIN);
+            superAdmin.setStatus(UserStatus.ACTIVE);
+            userRepository.save(superAdmin);
+        }
 
-        createUser(tenant.getId(), "superadmin", "Demo Super Admin", Role.SUPER_ADMIN);
-        User admin = createUser(tenant.getId(), "admin", "Demo Admin", Role.ADMIN);
-        createUser(tenant.getId(), "driver", "Demo Driver", Role.DRIVER);
+        User admin = userRepository.findByTenantIdAndUsernameIgnoreCase(tenant.getId(), "admin").orElse(null);
+        if (admin == null) {
+            admin = createUser(tenant.getId(), "admin", "Demo Admin", Role.ADMIN);
+        }
 
-        tenant.setAdminUserId(admin.getId());
-        tenant = tenantRepository.save(tenant);
+        User driver = userRepository.findByTenantIdAndUsernameIgnoreCase(tenant.getId(), "driver").orElse(null);
+        if (driver == null) {
+            createUser(tenant.getId(), "driver", "Demo Driver", Role.DRIVER);
+        }
 
-        seedVehicle(tenant.getId(), admin.getId(), "TN20CM7677", VehicleCategory.CAR,
-                DeviceState.RUNNING, 12.9718, 77.5946, 46, "864000000000001");
-        seedVehicle(tenant.getId(), admin.getId(), "KA05MJ1234", VehicleCategory.TRUCK,
-                DeviceState.STOPPED, 12.9352, 77.6245, 0, "864000000000002");
-        seedVehicle(tenant.getId(), admin.getId(), "KA01AB9999", VehicleCategory.BUS,
-                DeviceState.IDLE, 12.9611, 77.6387, 3, "864000000000003");
-        seedVehicle(tenant.getId(), admin.getId(), "TN09XY4321", VehicleCategory.BIKE,
-                DeviceState.NO_DATA, 13.0102, 77.5590, 0, "864000000000004");
+        if (tenant.getAdminUserId() == null && admin != null) {
+            tenant.setAdminUserId(admin.getId());
+            tenantRepository.save(tenant);
+        }
 
-        log.info("Demo seed complete. Company code DEMO / user superadmin|admin|driver / pw {}",
-                DEMO_PASSWORD);
+        if (deviceRepository.count() == 0) {
+            seedVehicle(tenant.getId(), admin.getId(), "TN20CM7677", VehicleCategory.CAR,
+                    DeviceState.RUNNING, 12.9718, 77.5946, 46, "864000000000001");
+            seedVehicle(tenant.getId(), admin.getId(), "KA05MJ1234", VehicleCategory.TRUCK,
+                    DeviceState.STOPPED, 12.9352, 77.6245, 0, "864000000000002");
+            seedVehicle(tenant.getId(), admin.getId(), "KA01AB9999", VehicleCategory.BUS,
+                    DeviceState.IDLE, 12.9611, 77.6387, 3, "864000000000003");
+            seedVehicle(tenant.getId(), admin.getId(), "TN09XY4321", VehicleCategory.BIKE,
+                    DeviceState.NO_DATA, 13.0102, 77.5590, 0, "864000000000004");
+        }
+
+        log.info("Demo seed verified. Company code DEMO / superadmin available.");
     }
 
     private User createUser(Long tenantId, String username, String name, Role role) {
@@ -115,8 +134,6 @@ public class DataSeeder implements CommandLineRunner {
         user.setRole(role);
         user.setPasswordHash(passwordEncoder.encode(DEMO_PASSWORD));
         user = userRepository.save(user);
-        // Home-tenant access grant. Every login needs one; multi-tenant access is
-        // granted by adding further rows (or by holding the SUPER_ADMIN role).
         tenantUserRepository.save(TenantUser.grant(tenantId, user.getId(), true, null));
         return user;
     }
@@ -141,7 +158,6 @@ public class DataSeeder implements CommandLineRunner {
         device.setExpiryDate(LocalDate.now().plusMonths(6));
         device.setActivatedAt(LocalDate.now().minusMonths(6));
         device.setStatus(DeviceStatus.ACTIVE);
-        // Predictable demo ingestion token so the GPS pipeline is testable locally.
         device.setIngestToken("demo-ingest-" + imei);
         device = deviceRepository.save(device);
 

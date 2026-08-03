@@ -17,20 +17,24 @@ import org.springframework.transaction.annotation.Transactional;
 /**
  * Server-side authority on which tenants a user may act inside.
  *
- * <p>Every tenant id that reaches a repository query must have passed through
+ * <p>
+ * Every tenant id that reaches a repository query must have passed through
  * here first. The rules:
  *
  * <ul>
- *   <li>A user may always act inside their home tenant ({@code users.tenant_id}).</li>
- *   <li>Any additional tenant requires an explicit {@code tenant_users} grant.</li>
- *   <li>A platform SUPER_ADMIN (a Super Admin holding {@code manage_tenants})
- *       may act inside any tenant; that is what makes the tenant switcher useful
- *       for operators, and it is still a server-side decision.</li>
- *   <li>A DISABLED tenant can never become the active tenant, whatever the
- *       caller's role.</li>
+ * <li>A user may always act inside their home tenant
+ * ({@code users.tenant_id}).</li>
+ * <li>Any additional tenant requires an explicit {@code tenant_users}
+ * grant.</li>
+ * <li>A platform SUPER_ADMIN (a Super Admin holding {@code manage_tenants})
+ * may act inside any tenant; that is what makes the tenant switcher useful
+ * for operators, and it is still a server-side decision.</li>
+ * <li>A DISABLED tenant can never become the active tenant, whatever the
+ * caller's role.</li>
  * </ul>
  *
- * <p>Every rejection is audited as {@code TENANT_ACCESS_DENIED} so cross-tenant
+ * <p>
+ * Every rejection is audited as {@code TENANT_ACCESS_DENIED} so cross-tenant
  * probing is visible in the audit trail rather than silently 403-ing.
  */
 @Service
@@ -44,8 +48,10 @@ public class TenantAccessService {
      *
      * A row per HTTP request would make the audit table grow with traffic and add a
      * write to every read, which is not a trade a fleet-tracking backend can make.
-     * One entry per user, per tenant, per window still answers the question the audit
-     * trail exists to answer - who was reading which tenant's data, and when - without
+     * One entry per user, per tenant, per window still answers the question the
+     * audit
+     * trail exists to answer - who was reading which tenant's data, and when -
+     * without
      * turning every dashboard poll into an insert.
      */
     private static final Duration DATA_ACCESS_WINDOW = Duration.ofMinutes(15);
@@ -58,14 +64,17 @@ public class TenantAccessService {
     private final AuditService auditService;
 
     public TenantAccessService(TenantRepository tenantRepository,
-                               TenantUserRepository tenantUserRepository,
-                               AuditService auditService) {
+            TenantUserRepository tenantUserRepository,
+            AuditService auditService) {
         this.tenantRepository = tenantRepository;
         this.tenantUserRepository = tenantUserRepository;
         this.auditService = auditService;
     }
 
-    /** True when the role may administer tenants (create / edit / delete / switch anywhere). */
+    /**
+     * True when the role may administer tenants (create / edit / delete / switch
+     * anywhere).
+     */
     public boolean isPlatformAdmin(Role role) {
         return role == Role.SUPER_ADMIN;
     }
@@ -128,7 +137,7 @@ public class TenantAccessService {
      * Authorises the tenant for the principal and returns it, or throws.
      *
      * @throws ForbiddenException when the caller is not authorised for the tenant,
-     *                           or the tenant is not usable (missing / disabled).
+     *                            or the tenant is not usable (missing / disabled).
      */
     @Transactional(readOnly = true)
     public Tenant requireAccess(AppUserPrincipal principal, Long tenantId) {
@@ -163,7 +172,8 @@ public class TenantAccessService {
      * {@link #DATA_ACCESS_WINDOW} per user+tenant.
      *
      * The entry that matters for an audit is the first read of a tenant's data in a
-     * session, especially a tenant that is not the user's own; the thousandth live-map
+     * session, especially a tenant that is not the user's own; the thousandth
+     * live-map
      * poll in the same minute adds nothing. Failures here are swallowed by
      * {@link AuditService}, so auditing can never break a request.
      */
@@ -185,7 +195,10 @@ public class TenantAccessService {
                 switched ? "Data access in a switched (non-home) tenant" : "Data access in home tenant");
     }
 
-    /** Drops throttle entries for a user, so a new session audits its first read again. */
+    /**
+     * Drops throttle entries for a user, so a new session audits its first read
+     * again.
+     */
     public void resetDataAccessThrottle(Long userId) {
         if (userId == null) {
             return;

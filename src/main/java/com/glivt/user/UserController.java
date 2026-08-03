@@ -39,12 +39,13 @@ public class UserController {
 
     @GetMapping
     public ApiResponse<PageResponse<UserDto>> list(
+            @RequestParam(required = false) Role role,
             @RequestParam(required = false) String search,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
         currentUser.requirePermission(PermissionKeys.MANAGE_USERS);
         int safeSize = Math.min(Math.max(size, 1), MAX_PAGE_SIZE);
-        return ApiResponse.ok(service.list(currentUser.tenantId(), search,
+        return ApiResponse.ok(service.list(currentUser.tenantId(), role, search,
                 PageRequest.of(Math.max(page, 0), safeSize, Sort.by("name"))));
     }
 

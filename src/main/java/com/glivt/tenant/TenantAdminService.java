@@ -42,8 +42,6 @@ public class TenantAdminService {
     public static final String ACTION_UPDATE = "UPDATE_TENANT";
     public static final String ACTION_DELETE = "DELETE_TENANT";
 
-    private static final int MIN_PASSWORD_LENGTH = 8;
-
     private final TenantRepository tenantRepository;
     private final TenantUserRepository tenantUserRepository;
     private final TenantAccessService tenantAccessService;
@@ -118,17 +116,9 @@ public class TenantAdminService {
     public TenantDto create(AppUserPrincipal actor, TenantCreateRequest request) {
         requirePlatformAdmin(actor);
 
-        String tenantId = request.tenantId().trim();
         String name = request.name().trim();
         String adminEmail = request.adminEmail().trim().toLowerCase(java.util.Locale.ROOT);
 
-        if (!request.password().equals(request.confirmPassword())) {
-            throw new BadRequestException("Passwords do not match");
-        }
-        validatePasswordStrength(request.password());
-        if (tenantRepository.existsByCompanyCodeIgnoreCase(tenantId)) {
-            throw new DuplicateResourceException("Tenant ID is already in use");
-        }
         if (tenantRepository.existsByNameIgnoreCase(name)) {
             throw new DuplicateResourceException("Tenant name is already in use");
         }
@@ -137,7 +127,8 @@ public class TenantAdminService {
         }
 
         Tenant tenant = new Tenant();
-        tenant.setCompanyCode(tenantId);
+        // Temporary placeholder to satisfy non-null constraint before database ID generation
+        tenant.setCompanyCode("TEMP_" + java.util.UUID.randomUUID().toString());
         tenant.setName(name);
         tenant.setCompanyName(request.companyName().trim());
         tenant.setAppName(request.companyName().trim());
@@ -147,9 +138,12 @@ public class TenantAdminService {
         tenant.setStatus(TenantStatus.valueOf(request.status()));
         tenant = tenantRepository.save(tenant);
 
-        // The administrator signs in with the tenant ID as the company code and the
-        // admin email as the username; the form collects no separate username, and
-        // usernames are unique per tenant so a brand-new tenant cannot collide.
+        // Auto-generate integer system identifier (matching auto-increment ID)
+        tenant.setCompanyCode(String.valueOf(tenant.getId()));
+        tenant = tenantRepository.save(tenant);
+
+        // The administrator signs in via Microsoft authentication using the admin email.
+        // A random UUID hash is assigned so local password sign-in is disabled.
         User admin = new User();
         admin.setTenantId(tenant.getId());
         admin.setUsername(adminEmail);
@@ -158,7 +152,7 @@ public class TenantAdminService {
         admin.setMobile(request.adminPhone().trim());
         admin.setRole(Role.ADMIN);
         admin.setStatus(UserStatus.ACTIVE);
-        admin.setPasswordHash(passwordEncoder.encode(request.password()));
+        admin.setPasswordHash(passwordEncoder.encode(java.util.UUID.randomUUID().toString()));
         admin = userRepository.save(admin);
 
         tenant.setAdminUserId(admin.getId());
@@ -306,24 +300,6 @@ public class TenantAdminService {
         }
         return tenantRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Tenant not found"));
-    }
-
-    /**
-     * Password strength: length is enforced by bean validation; this adds the
-     * character-class requirement so a long but trivial password is still rejected.
-     */
-    private void validatePasswordStrength(String password) {
-        if (password.length() < MIN_PASSWORD_LENGTH) {
-            throw new BadRequestException("Password must be at least " + MIN_PASSWORD_LENGTH
-                    + " characters");
-        }
-        boolean upper = password.chars().anyMatch(Character::isUpperCase);
-        boolean lower = password.chars().anyMatch(Character::isLowerCase);
-        boolean digit = password.chars().anyMatch(Character::isDigit);
-        if (!upper || !lower || !digit) {
-            throw new BadRequestException(
-                    "Password must contain an uppercase letter, a lowercase letter and a number");
-        }
     }
 
     private TenantDto toDto(AppUserPrincipal principal, Tenant tenant) {

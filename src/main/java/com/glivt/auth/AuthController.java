@@ -32,6 +32,30 @@ public class AuthController {
         return ApiResponse.ok(authService.login(request));
     }
 
+    @PostMapping("/demo/super-admin")
+    @Operation(summary = "Authenticate as the preconfigured Super Admin demo user")
+    public ApiResponse<TokenResponse> superAdminDemoLogin() {
+        return ApiResponse.ok(authService.demoLogin());
+    }
+
+    @PostMapping("/demo/admin")
+    @Operation(summary = "Authenticate as the preconfigured Admin demo user")
+    public ApiResponse<TokenResponse> adminDemoLogin() {
+        return ApiResponse.ok(authService.adminDemoLogin());
+    }
+
+    @PostMapping("/demo/driver")
+    @Operation(summary = "Authenticate as the preconfigured Driver demo user")
+    public ApiResponse<TokenResponse> driverDemoLogin() {
+        return ApiResponse.ok(authService.driverDemoLogin());
+    }
+
+    @PostMapping("/demo-login")
+    @Operation(summary = "Authenticate as the preconfigured Super Admin demo user")
+    public ApiResponse<TokenResponse> legacyDemoLogin() {
+        return ApiResponse.ok(authService.demoLogin());
+    }
+
     @PostMapping("/refresh")
     @Operation(summary = "Rotate the refresh token and issue a new access token")
     public ApiResponse<TokenResponse> refresh(@Valid @RequestBody RefreshRequest request) {

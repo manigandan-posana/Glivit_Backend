@@ -38,24 +38,33 @@ public class UserService {
     }
 
     @Transactional(readOnly = true)
-    public PageResponse<UserDto> list(Long tenantId, String search, Pageable pageable) {
+    public PageResponse<UserDto> list(Long tenantId, Role role, String search, Pageable pageable) {
         String term = search == null || search.isBlank() ? null : search.trim();
-        return PageResponse.from(repository.search(tenantId, term, pageable), UserDto::from);
+        return PageResponse.from(repository.search(tenantId, role, term, pageable), UserDto::from);
     }
 
     @Transactional
     public UserDto create(Long tenantId, Long actorId, String actorUsername, UserUpsertRequest request) {
-        if (request.password() == null || request.password().isBlank()) {
-            throw new BadRequestException("Password is required");
+        if (request.mobile() == null || request.mobile().isBlank()) {
+            throw new BadRequestException("Mobile number is required");
         }
         if (repository.existsByTenantIdAndUsernameIgnoreCase(tenantId, request.username())) {
             throw new DuplicateResourceException("Username already exists");
+        }
+        String targetEmail = request.email() != null && !request.email().isBlank()
+                ? request.email().trim()
+                : (request.username().contains("@") ? request.username().trim() : null);
+        if (targetEmail != null && repository.existsByTenantIdAndEmailIgnoreCase(tenantId, targetEmail)) {
+            throw new DuplicateResourceException("Email is already registered for another user");
         }
         validateManager(tenantId, request.managerId());
         User user = new User();
         user.setTenantId(tenantId);
         apply(user, request);
-        user.setPasswordHash(passwordEncoder.encode(request.password()));
+        String rawPassword = (request.password() != null && !request.password().isBlank())
+                ? request.password()
+                : java.util.UUID.randomUUID().toString();
+        user.setPasswordHash(passwordEncoder.encode(rawPassword));
         user = repository.save(user);
         // Home-tenant access grant. Without it the user could still sign in (the
         // home tenant needs no grant) but would have no entry in the tenant access
@@ -73,6 +82,9 @@ public class UserService {
     @Transactional
     public UserDto update(Long tenantId, Long actorId, String actorUsername, Long id,
             UserUpsertRequest request) {
+        if (request.mobile() == null || request.mobile().isBlank()) {
+            throw new BadRequestException("Mobile number is required");
+        }
         User user = repository.findByIdAndTenantId(id, tenantId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
         if (repository.existsByTenantIdAndUsernameIgnoreCaseAndIdNot(
@@ -105,9 +117,14 @@ public class UserService {
     }
 
     private void apply(User user, UserUpsertRequest request) {
-        user.setUsername(request.username().trim());
+        String username = request.username().trim();
+        user.setUsername(username);
         user.setName(request.name().trim());
-        user.setEmail(blankToNull(request.email()));
+        String email = blankToNull(request.email());
+        if (email == null && username.contains("@")) {
+            email = username;
+        }
+        user.setEmail(email);
         user.setMobile(blankToNull(request.mobile()));
         user.setAddress(blankToNull(request.address()));
         user.setRole(request.role());

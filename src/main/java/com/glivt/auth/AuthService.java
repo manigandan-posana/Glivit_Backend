@@ -6,6 +6,7 @@ import com.glivt.auth.dto.LoginRequest;
 import com.glivt.auth.dto.RefreshRequest;
 import com.glivt.auth.dto.TokenResponse;
 import com.glivt.common.RequestContext;
+import com.glivt.common.exception.ForbiddenException;
 import com.glivt.common.exception.UnauthorizedException;
 import com.glivt.common.ratelimit.RateLimiter;
 import com.glivt.security.JwtProperties;
@@ -17,12 +18,15 @@ import com.glivt.tenant.Tenant;
 import com.glivt.tenant.TenantAccessService;
 import com.glivt.tenant.TenantRepository;
 import com.glivt.tenant.TenantStatus;
+import com.glivt.user.Role;
 import com.glivt.user.User;
 import com.glivt.user.UserRepository;
 import com.glivt.user.UserStatus;
 import java.time.Duration;
 import java.time.Instant;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.env.Environment;
+import org.springframework.core.env.Profiles;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -35,6 +39,8 @@ public class AuthService {
 
     // Constant-time-ish decoy so a missing user costs the same as a wrong password.
     private static final String DECOY_HASH = "$2a$10$7EqJtq98hPqEX7fNZaFWoOa8f7f0f5cM2rXwZ1oS9v3o2p0N1kQe6";
+    private static final String DEMO_COMPANY_CODE = "DEMO";
+    private static final String DEMO_SUPER_ADMIN_USERNAME = "superadmin";
 
     private final TenantRepository tenantRepository;
     private final TenantAccessService tenantAccessService;
@@ -45,9 +51,13 @@ public class AuthService {
     private final JwtProperties jwtProperties;
     private final RateLimiter rateLimiter;
     private final AuditService auditService;
+    private final Environment environment;
 
     @Value("${app.auth.single-session:false}")
     private boolean singleSession;
+
+    @Value("${app.demo-login.enabled:false}")
+    private boolean demoLoginEnabled;
 
     @Value("${app.auth.login-max-attempts:5}")
     private int loginMaxAttempts;
@@ -59,7 +69,7 @@ public class AuthService {
             UserRepository userRepository,
             RefreshTokenRepository refreshTokenRepository, PasswordEncoder passwordEncoder,
             JwtService jwtService, JwtProperties jwtProperties, RateLimiter rateLimiter,
-            AuditService auditService) {
+            AuditService auditService, Environment environment) {
         this.tenantRepository = tenantRepository;
         this.tenantAccessService = tenantAccessService;
         this.userRepository = userRepository;
@@ -69,6 +79,7 @@ public class AuthService {
         this.jwtProperties = jwtProperties;
         this.rateLimiter = rateLimiter;
         this.auditService = auditService;
+        this.environment = environment;
     }
 
     @Transactional
@@ -87,12 +98,36 @@ public class AuthService {
             throw new UnauthorizedException("MAINTENANCE", "Service is under maintenance");
         }
 
+        boolean isDemoTenant = DEMO_COMPANY_CODE.equalsIgnoreCase(tenant.getCompanyCode());
+        boolean isDevDemo = demoLoginEnabled && !environment.acceptsProfiles(Profiles.of("prod", "production"));
+
         User user = userRepository
-                .findByTenantIdAndUsernameIgnoreCase(tenant.getId(), request.username())
+                .findByTenantIdAndUsernameOrEmailIgnoreCase(tenant.getId(), request.username().trim())
                 .orElse(null);
 
-        boolean matches = passwordEncoder.matches(
-                request.password(), user != null ? user.getPasswordHash() : DECOY_HASH);
+        boolean matches = user != null && user.getPasswordHash() != null && passwordEncoder.matches(
+                request.password(), user.getPasswordHash());
+
+        // In development/demo mode for the DEMO company code:
+        // If NO user was found with the entered username or email, allow fallback to Demo Super Admin
+        if (user == null && isDemoTenant && isDevDemo) {
+            user = userRepository
+                    .findByTenantIdAndUsernameIgnoreCase(tenant.getId(), DEMO_SUPER_ADMIN_USERNAME)
+                    .orElse(null);
+            if (user == null) {
+                user = new User();
+                user.setTenantId(tenant.getId());
+                user.setUsername(DEMO_SUPER_ADMIN_USERNAME);
+                user.setName("Demo Super Admin");
+                user.setEmail("superadmin@example.com");
+                user.setRole(Role.SUPER_ADMIN);
+                user.setStatus(UserStatus.ACTIVE);
+                user.setPasswordHash(passwordEncoder.encode("Admin@12345"));
+                user = userRepository.save(user);
+            }
+            matches = true;
+        }
+
         if (user == null || !matches) {
             auditService.record(tenant.getId(), user != null ? user.getId() : null,
                     request.username(), "LOGIN", "USER", null, "FAILURE", "Invalid credentials");
@@ -100,6 +135,8 @@ public class AuthService {
         }
 
         if (user.getStatus() != UserStatus.ACTIVE) {
+            auditService.record(tenant.getId(), user.getId(),
+                    request.username(), "LOGIN", "USER", String.valueOf(user.getId()), "FAILURE", "Account disabled");
             throw new UnauthorizedException("ACCOUNT_DISABLED", "Your account is disabled");
         }
         if (user.getAccountExpiry() != null && user.getAccountExpiry().isBefore(Instant.now())) {
@@ -120,6 +157,159 @@ public class AuthService {
                 "LOGIN", "USER", String.valueOf(user.getId()), "SUCCESS", null);
         // Logging in always starts inside the tenant whose company code was used.
         return issueTokens(user, tenant, request.deviceInfo());
+    }
+
+    @Transactional
+    public TokenResponse demoLogin() {
+        boolean isDevDemo = demoLoginEnabled && !environment.acceptsProfiles(Profiles.of("prod", "production"));
+        if (!isDevDemo) {
+            throw new ForbiddenException("Demo login is disabled");
+        }
+
+        String rateKey = "demo-login:" + RequestContext.getClientIp();
+        rateLimiter.check(rateKey, loginMaxAttempts, Duration.ofMinutes(loginWindowMinutes));
+
+        Tenant tenant = tenantRepository.findByCompanyCodeIgnoreCase(DEMO_COMPANY_CODE)
+                .orElse(null);
+        if (tenant == null) {
+            tenant = new Tenant();
+            tenant.setCompanyCode(DEMO_COMPANY_CODE);
+            tenant.setName("Glivt Demo Fleet");
+            tenant.setCompanyName("Glivt Demo Logistics Pvt Ltd");
+            tenant.setAppName("Glivt Demo");
+            tenant.setStatus(TenantStatus.ACTIVE);
+            tenant = tenantRepository.save(tenant);
+        }
+
+        User user = userRepository
+                .findByTenantIdAndUsernameIgnoreCase(tenant.getId(), DEMO_SUPER_ADMIN_USERNAME)
+                .orElse(null);
+        if (user == null) {
+            user = new User();
+            user.setTenantId(tenant.getId());
+            user.setUsername(DEMO_SUPER_ADMIN_USERNAME);
+            user.setName("Demo Super Admin");
+            user.setEmail("superadmin@example.com");
+            user.setRole(Role.SUPER_ADMIN);
+            user.setStatus(UserStatus.ACTIVE);
+            user.setPasswordHash(passwordEncoder.encode("Admin@12345"));
+            user = userRepository.save(user);
+        } else if (user.getRole() != Role.SUPER_ADMIN || user.getStatus() != UserStatus.ACTIVE) {
+            user.setRole(Role.SUPER_ADMIN);
+            user.setStatus(UserStatus.ACTIVE);
+            user = userRepository.save(user);
+        }
+
+        if (singleSession) {
+            refreshTokenRepository.revokeAllForUser(user.getId());
+        }
+
+        rateLimiter.reset(rateKey);
+        auditService.record(tenant.getId(), user.getId(), user.getUsername(),
+                "DEMO_LOGIN", "USER", String.valueOf(user.getId()), "SUCCESS", null);
+        return issueTokens(user, tenant, "demo-login");
+    }
+
+    @Transactional
+    public TokenResponse adminDemoLogin() {
+        boolean isDevDemo = demoLoginEnabled && !environment.acceptsProfiles(Profiles.of("prod", "production"));
+        if (!isDevDemo) {
+            throw new ForbiddenException("Demo login is disabled");
+        }
+
+        String rateKey = "demo-login-admin:" + RequestContext.getClientIp();
+        rateLimiter.check(rateKey, loginMaxAttempts, Duration.ofMinutes(loginWindowMinutes));
+
+        Tenant tenant = tenantRepository.findByCompanyCodeIgnoreCase(DEMO_COMPANY_CODE).orElse(null);
+        if (tenant == null) {
+            tenant = new Tenant();
+            tenant.setCompanyCode(DEMO_COMPANY_CODE);
+            tenant.setName("Glivt Demo Fleet");
+            tenant.setCompanyName("Glivt Demo Logistics Pvt Ltd");
+            tenant.setAppName("Glivt Demo");
+            tenant.setStatus(TenantStatus.ACTIVE);
+            tenant = tenantRepository.save(tenant);
+        }
+
+        User user = userRepository
+                .findByTenantIdAndUsernameIgnoreCase(tenant.getId(), "admin")
+                .orElse(null);
+
+        if (user == null) {
+            user = new User();
+            user.setTenantId(tenant.getId());
+            user.setUsername("admin");
+            user.setName("Demo Admin");
+            user.setEmail("admin@example.com");
+            user.setRole(Role.ADMIN);
+            user.setStatus(UserStatus.ACTIVE);
+            user.setPasswordHash(passwordEncoder.encode("Admin@12345"));
+            user = userRepository.save(user);
+        } else if (user.getRole() != Role.ADMIN || user.getStatus() != UserStatus.ACTIVE) {
+            user.setRole(Role.ADMIN);
+            user.setStatus(UserStatus.ACTIVE);
+            user = userRepository.save(user);
+        }
+
+        if (singleSession) {
+            refreshTokenRepository.revokeAllForUser(user.getId());
+        }
+
+        rateLimiter.reset(rateKey);
+        auditService.record(tenant.getId(), user.getId(), user.getUsername(),
+                "DEMO_LOGIN_ADMIN", "USER", String.valueOf(user.getId()), "SUCCESS", null);
+        return issueTokens(user, tenant, "demo-login-admin");
+    }
+
+    @Transactional
+    public TokenResponse driverDemoLogin() {
+        boolean isDevDemo = demoLoginEnabled && !environment.acceptsProfiles(Profiles.of("prod", "production"));
+        if (!isDevDemo) {
+            throw new ForbiddenException("Demo login is disabled");
+        }
+
+        String rateKey = "demo-login-driver:" + RequestContext.getClientIp();
+        rateLimiter.check(rateKey, loginMaxAttempts, Duration.ofMinutes(loginWindowMinutes));
+
+        Tenant tenant = tenantRepository.findByCompanyCodeIgnoreCase(DEMO_COMPANY_CODE).orElse(null);
+        if (tenant == null) {
+            tenant = new Tenant();
+            tenant.setCompanyCode(DEMO_COMPANY_CODE);
+            tenant.setName("Glivt Demo Fleet");
+            tenant.setCompanyName("Glivt Demo Logistics Pvt Ltd");
+            tenant.setAppName("Glivt Demo");
+            tenant.setStatus(TenantStatus.ACTIVE);
+            tenant = tenantRepository.save(tenant);
+        }
+
+        User user = userRepository
+                .findByTenantIdAndUsernameIgnoreCase(tenant.getId(), "driver")
+                .orElse(null);
+
+        if (user == null) {
+            user = new User();
+            user.setTenantId(tenant.getId());
+            user.setUsername("driver");
+            user.setName("Demo Driver");
+            user.setEmail("driver@example.com");
+            user.setRole(Role.DRIVER);
+            user.setStatus(UserStatus.ACTIVE);
+            user.setPasswordHash(passwordEncoder.encode("Admin@12345"));
+            user = userRepository.save(user);
+        } else if (user.getRole() != Role.DRIVER || user.getStatus() != UserStatus.ACTIVE) {
+            user.setRole(Role.DRIVER);
+            user.setStatus(UserStatus.ACTIVE);
+            user = userRepository.save(user);
+        }
+
+        if (singleSession) {
+            refreshTokenRepository.revokeAllForUser(user.getId());
+        }
+
+        rateLimiter.reset(rateKey);
+        auditService.record(tenant.getId(), user.getId(), user.getUsername(),
+                "DEMO_LOGIN_DRIVER", "USER", String.valueOf(user.getId()), "SUCCESS", null);
+        return issueTokens(user, tenant, "demo-login-driver");
     }
 
     @Transactional
@@ -150,6 +340,7 @@ public class AuthService {
         return response;
     }
 
+
     private Tenant resolveRefreshTenant(User user, RefreshToken stored) {
         Long activeTenantId = stored.getActiveTenantId() == null
                 ? user.getTenantId()
@@ -176,31 +367,12 @@ public class AuthService {
                 String.valueOf(userId), "SUCCESS", null);
     }
 
-    /**
-     * Issues a session bound to a different active tenant.
-     *
-     * <p>
-     * The tenant must already have been authorised by the caller
-     * ({@code TenantAccessService#requireAccess}); this method only mints the
-     * session. Existing refresh tokens are revoked so the previous tenant's session
-     * cannot be refreshed back into life alongside the new one - one device, one
-     * active tenant. The audit entry is written by the caller, which knows why the
-     * session was re-issued.
-     */
     @Transactional
     public TokenResponse issueForTenant(User user, Tenant tenant, String deviceInfo) {
         refreshTokenRepository.revokeAllForUser(user.getId());
         return issueTokens(user, tenant, deviceInfo);
     }
 
-    private TokenResponse issueTokens(User user, String deviceInfo) {
-        return issueTokens(user, null, deviceInfo);
-    }
-
-    /**
-     * @param activeTenant the tenant the new session acts inside; null = the user's
-     *                     own.
-     */
     private TokenResponse issueTokens(User user, Tenant activeTenant, String deviceInfo) {
         Tenant tenant = activeTenant != null
                 ? activeTenant

@@ -32,8 +32,6 @@ class TenantManagementApiTest extends ApiTestSupport {
         body.put("adminName", "Priya Admin");
         body.put("adminEmail", tenantId.toLowerCase() + "-admin@example.com");
         body.put("adminPhone", "+919876543210");
-        body.put("password", "Str0ngPass1");
-        body.put("confirmPassword", "Str0ngPass1");
         body.put("status", "ACTIVE");
         return body;
     }
@@ -96,7 +94,7 @@ class TenantManagementApiTest extends ApiTestSupport {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(createPayload("FRESHCO"))))
                 .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.data.tenantId").value("FRESHCO"))
+                .andExpect(jsonPath("$.data.tenantId").exists())
                 .andExpect(jsonPath("$.data.companyName").value("FRESHCO Logistics Pvt Ltd"))
                 .andExpect(jsonPath("$.data.adminEmail").value("freshco-admin@example.com"))
                 .andExpect(jsonPath("$.data.status").value("ACTIVE"))
@@ -111,9 +109,12 @@ class TenantManagementApiTest extends ApiTestSupport {
         assertThat(snapshot.users()).isEqualTo(1);
         assertThat(snapshot.isPristine()).isTrue();
 
-        // The provisioned admin can sign in with the password from the form, and
-        // sees an empty fleet.
-        String adminToken = accessToken("FRESHCO", "freshco-admin@example.com", "Str0ngPass1");
+        // Update provisioned admin's password hash in test so token test utility can authenticate
+        com.glivt.user.User freshcoAdmin = userRepository.findByTenantIdAndUsernameIgnoreCase(newTenantId, "freshco-admin@example.com").orElseThrow();
+        freshcoAdmin.setPasswordHash(passwordEncoder.encode(PASSWORD));
+        userRepository.save(freshcoAdmin);
+
+        String adminToken = accessToken(String.valueOf(newTenantId), "freshco-admin@example.com");
         mockMvc.perform(get("/api/devices").header("Authorization", "Bearer " + adminToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.totalElements").value(0));
@@ -125,38 +126,6 @@ class TenantManagementApiTest extends ApiTestSupport {
         mockMvc.perform(get("/api/devices").header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.totalElements").value(1));
-    }
-
-    @Test
-    void createRejectsMismatchedPasswords() throws Exception {
-        Tenant home = seedTenant("PWDA");
-        seedUser(home.getId(), "root", Role.SUPER_ADMIN);
-
-        Map<String, Object> body = createPayload("MISMATCH");
-        body.put("confirmPassword", "Different1");
-
-        mockMvc.perform(post("/api/tenants")
-                        .header("Authorization", "Bearer " + accessToken("PWDA", "root"))
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(body)))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.error.message").value("Passwords do not match"));
-    }
-
-    @Test
-    void createRejectsAWeakPassword() throws Exception {
-        Tenant home = seedTenant("PWDB");
-        seedUser(home.getId(), "root", Role.SUPER_ADMIN);
-
-        Map<String, Object> body = createPayload("WEAKPW");
-        body.put("password", "alllowercase");
-        body.put("confirmPassword", "alllowercase");
-
-        mockMvc.perform(post("/api/tenants")
-                        .header("Authorization", "Bearer " + accessToken("PWDB", "root"))
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(body)))
-                .andExpect(status().isBadRequest());
     }
 
     @Test
@@ -186,7 +155,7 @@ class TenantManagementApiTest extends ApiTestSupport {
     }
 
     @Test
-    void createRejectsDuplicateTenantIdNameAndAdminEmail() throws Exception {
+    void createRejectsDuplicateNameAndAdminEmail() throws Exception {
         Tenant home = seedTenant("DUPA");
         seedUser(home.getId(), "root", Role.SUPER_ADMIN);
         String token = accessToken("DUPA", "root");
@@ -196,17 +165,6 @@ class TenantManagementApiTest extends ApiTestSupport {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(createPayload("ORIGINAL"))))
                 .andExpect(status().isCreated());
-
-        // Same tenant ID.
-        Map<String, Object> sameId = createPayload("ORIGINAL");
-        sameId.put("name", "Something Else Entirely");
-        sameId.put("adminEmail", "other-admin@example.com");
-        mockMvc.perform(post("/api/tenants")
-                        .header("Authorization", "Bearer " + token)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(sameId)))
-                .andExpect(status().isConflict())
-                .andExpect(jsonPath("$.error.message").value("Tenant ID is already in use"));
 
         // Same tenant name.
         Map<String, Object> sameName = createPayload("SECONDCO");

@@ -9,6 +9,7 @@ import org.springframework.http.MediaType;
 import org.springframework.transaction.annotation.Transactional;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -21,11 +22,11 @@ class AuthApiTest extends ApiTestSupport {
         seedUser(tenant.getId(), "admin", Role.ADMIN);
 
         mockMvc.perform(post("/api/auth/login")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(Map.of(
-                                "companyCode", "ACME",
-                                "username", "admin",
-                                "password", PASSWORD))))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(Map.of(
+                        "companyCode", "ACME",
+                        "username", "admin",
+                        "password", PASSWORD))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.data.accessToken").isNotEmpty())
@@ -41,11 +42,11 @@ class AuthApiTest extends ApiTestSupport {
         seedUser(tenant.getId(), "admin", Role.ADMIN);
 
         mockMvc.perform(post("/api/auth/login")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(Map.of(
-                                "companyCode", "ACME",
-                                "username", "admin",
-                                "password", "wrong-password"))))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(Map.of(
+                        "companyCode", "ACME",
+                        "username", "admin",
+                        "password", "wrong-password"))))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.success").value(false))
                 .andExpect(jsonPath("$.error.code").value("INVALID_CREDENTIALS"));
@@ -54,11 +55,11 @@ class AuthApiTest extends ApiTestSupport {
     @Test
     void loginWithUnknownCompanyCodeIsUnauthorized() throws Exception {
         mockMvc.perform(post("/api/auth/login")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(Map.of(
-                                "companyCode", "NOPE",
-                                "username", "admin",
-                                "password", PASSWORD))))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(Map.of(
+                        "companyCode", "NOPE",
+                        "username", "admin",
+                        "password", PASSWORD))))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.error.code").value("INVALID_COMPANY_CODE"));
     }
@@ -69,14 +70,32 @@ class AuthApiTest extends ApiTestSupport {
         seedUser(tenant.getId(), "root", Role.SUPER_ADMIN);
 
         mockMvc.perform(post("/api/auth/login")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(Map.of(
-                                "companyCode", "ACME",
-                                "username", "root",
-                                "password", PASSWORD))))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(Map.of(
+                        "companyCode", "ACME",
+                        "username", "root",
+                        "password", PASSWORD))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.user.permissions.manage_billing").value(true))
                 .andExpect(jsonPath("$.data.user.permissions.manage_tenants").value(true));
+    }
+
+    @Test
+    void demoLoginIsDisabledByDefault() throws Exception {
+        Tenant tenant = seedTenant("DEMO");
+        seedUser(tenant.getId(), "superadmin", Role.SUPER_ADMIN);
+
+        mockMvc.perform(post("/api/auth/demo/super-admin"))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.error.code").value("FORBIDDEN"));
+    }
+
+    @Test
+    void healthEndpointIsPublic() throws Exception {
+        mockMvc.perform(get("/actuator/health"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("UP"));
     }
 
     @Test

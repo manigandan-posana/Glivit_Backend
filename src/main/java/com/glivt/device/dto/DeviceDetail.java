@@ -14,6 +14,7 @@ public record DeviceDetail(
         Long vehicleId,
         String vehicleName,
         Long managerId,
+        Long driverId,
         String simNumber,
         String simProvider,
         String simApn,
