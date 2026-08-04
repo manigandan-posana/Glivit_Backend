@@ -64,7 +64,7 @@ public final class Permissions {
                 // Everything - handled by FULL_ACCESS; seed the known keys as true.
                 putAll(map, true);
             }
-            case ADMIN -> {
+            case ADMIN, TENANT_ADMIN -> {
                 putAll(map, false);
                 map.put(PermissionKeys.VIEW_ALL_VEHICLES, true);
                 map.put(PermissionKeys.VIEW_LIVE_LOCATION, true);
@@ -80,6 +80,13 @@ public final class Permissions {
                 map.put(PermissionKeys.EXPORT_REPORTS, true);
                 map.put(PermissionKeys.MANAGE_REPORT_SCHEDULES, true);
                 map.put(PermissionKeys.MANAGE_NOTIFICATIONS, true);
+            }
+            case COMPANY_USER -> {
+                putAll(map, false);
+                map.put(PermissionKeys.VIEW_ALL_VEHICLES, true);
+                map.put(PermissionKeys.VIEW_LIVE_LOCATION, true);
+                map.put(PermissionKeys.VIEW_REPORTS, true);
+                map.put(PermissionKeys.EXPORT_REPORTS, true);
             }
             case DRIVER -> {
                 putAll(map, false);

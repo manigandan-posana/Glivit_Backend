@@ -69,6 +69,12 @@ public class UserSettings {
     @Column(name = "privacy_options", columnDefinition = "TEXT")
     private String privacyOptions;
 
+    @Column(name = "theme_mode", nullable = false, length = 16)
+    private String themeMode = "system";
+
+    @Column(name = "theme_color", length = 16)
+    private String themeColor;
+
     @Column(name = "updated_at", nullable = false)
     private Instant updatedAt;
 

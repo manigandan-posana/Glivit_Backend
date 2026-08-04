@@ -17,6 +17,8 @@ public record SettingsDto(
         boolean autoFollowVehicle,
         int refreshFrequencySeconds,
         String privacyOptions,
+        String themeMode,
+        String themeColor,
         Instant updatedAt) {
 
     public static SettingsDto from(UserSettings s) {
@@ -24,6 +26,7 @@ public record SettingsDto(
                 s.getMapStyle(), s.isTrafficEnabled(), s.getRouteColorMode(),
                 s.isNotificationSound(), s.getLanguage(), s.getDateFormat(),
                 s.getDefaultHistoryRange(), s.isAutoFollowVehicle(),
-                s.getRefreshFrequencySeconds(), s.getPrivacyOptions(), s.getUpdatedAt());
+                s.getRefreshFrequencySeconds(), s.getPrivacyOptions(),
+                s.getThemeMode(), s.getThemeColor(), s.getUpdatedAt());
     }
 }

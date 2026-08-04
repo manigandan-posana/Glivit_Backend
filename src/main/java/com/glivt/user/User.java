@@ -20,10 +20,9 @@ import lombok.Setter;
 // account in two tenants, and one tenant can never probe another's user list by
 // testing whether an email is taken.
 @Table(name = "users", uniqueConstraints = {
-        @jakarta.persistence.UniqueConstraint(
-                name = "uk_users_tenant_username", columnNames = {"tenant_id", "username"}),
-        @jakarta.persistence.UniqueConstraint(
-                name = "uk_users_tenant_email", columnNames = {"tenant_id", "email"})
+        @jakarta.persistence.UniqueConstraint(name = "uk_users_tenant_username", columnNames = { "tenant_id",
+                "username" }),
+        @jakarta.persistence.UniqueConstraint(name = "uk_users_tenant_email", columnNames = { "tenant_id", "email" })
 })
 @Getter
 @Setter

@@ -105,8 +105,13 @@ public class AuthService {
                 .findByTenantIdAndUsernameOrEmailIgnoreCase(tenant.getId(), request.username().trim())
                 .orElse(null);
 
-        boolean matches = user != null && user.getPasswordHash() != null && passwordEncoder.matches(
-                request.password(), user.getPasswordHash());
+        boolean matches;
+        if (user != null && user.getPasswordHash() != null) {
+            matches = passwordEncoder.matches(request.password(), user.getPasswordHash());
+        } else {
+            passwordEncoder.matches(request.password(), DECOY_HASH);
+            matches = false;
+        }
 
         // In development/demo mode for the DEMO company code:
         // If NO user was found with the entered username or email, allow fallback to Demo Super Admin

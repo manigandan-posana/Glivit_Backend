@@ -25,21 +25,37 @@ public class SettingsService {
     @Transactional
     public SettingsDto update(Long tenantId, Long userId, String username, SettingsRequest request) {
         UserSettings settings = findOrCreate(tenantId, userId);
-        if (request.distanceUnit() != null) settings.setDistanceUnit(request.distanceUnit());
-        if (request.speedUnit() != null) settings.setSpeedUnit(request.speedUnit());
-        if (request.timeFormat() != null) settings.setTimeFormat(request.timeFormat());
-        if (request.mapStyle() != null) settings.setMapStyle(request.mapStyle());
-        if (request.trafficEnabled() != null) settings.setTrafficEnabled(request.trafficEnabled());
-        if (request.routeColorMode() != null) settings.setRouteColorMode(request.routeColorMode());
-        if (request.notificationSound() != null) settings.setNotificationSound(request.notificationSound());
-        if (request.language() != null) settings.setLanguage(request.language());
-        if (request.dateFormat() != null) settings.setDateFormat(request.dateFormat());
-        if (request.defaultHistoryRange() != null) settings.setDefaultHistoryRange(request.defaultHistoryRange());
-        if (request.autoFollowVehicle() != null) settings.setAutoFollowVehicle(request.autoFollowVehicle());
+        if (request.distanceUnit() != null)
+            settings.setDistanceUnit(request.distanceUnit());
+        if (request.speedUnit() != null)
+            settings.setSpeedUnit(request.speedUnit());
+        if (request.timeFormat() != null)
+            settings.setTimeFormat(request.timeFormat());
+        if (request.mapStyle() != null)
+            settings.setMapStyle(request.mapStyle());
+        if (request.trafficEnabled() != null)
+            settings.setTrafficEnabled(request.trafficEnabled());
+        if (request.routeColorMode() != null)
+            settings.setRouteColorMode(request.routeColorMode());
+        if (request.notificationSound() != null)
+            settings.setNotificationSound(request.notificationSound());
+        if (request.language() != null)
+            settings.setLanguage(request.language());
+        if (request.dateFormat() != null)
+            settings.setDateFormat(request.dateFormat());
+        if (request.defaultHistoryRange() != null)
+            settings.setDefaultHistoryRange(request.defaultHistoryRange());
+        if (request.autoFollowVehicle() != null)
+            settings.setAutoFollowVehicle(request.autoFollowVehicle());
         if (request.refreshFrequencySeconds() != null) {
             settings.setRefreshFrequencySeconds(request.refreshFrequencySeconds());
         }
-        if (request.privacyOptions() != null) settings.setPrivacyOptions(request.privacyOptions());
+        if (request.privacyOptions() != null)
+            settings.setPrivacyOptions(request.privacyOptions());
+        if (request.themeMode() != null)
+            settings.setThemeMode(request.themeMode());
+        if (request.themeColor() != null)
+            settings.setThemeColor(request.themeColor());
         settings = repository.save(settings);
         auditService.record(tenantId, userId, username, "UPDATE_SETTINGS", "USER",
                 String.valueOf(userId), "SUCCESS", null);
