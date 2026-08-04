@@ -14,7 +14,6 @@ public record DeviceUpsertRequest(
         Integer port,
         @NotBlank @Size(max = 32) String category,
         Long projectId,
-        Long groupId,
         Long vehicleId,
         Long managerId,
         Long driverId,

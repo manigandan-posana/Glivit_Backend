@@ -212,7 +212,7 @@ public class DeviceService {
     private DeviceDetail toDetail(Device d, DeviceCurrentPosition p) {
         return new DeviceDetail(
                 d.getId(), d.getName(), d.getImei(), d.getModel(), d.getCategory(),
-                d.getProjectId(), d.getGroupId(), d.getVehicleId(), resolveVehicleName(d), d.getManagerId(), d.getDriverId(),
+                d.getProjectId(), d.getVehicleId(), resolveVehicleName(d), d.getManagerId(), d.getDriverId(),
                 d.getSimNumber(), d.getSimProvider(), d.getSimApn(),
                 d.getDriverName(), d.getDriverPhone(), d.getAddress(), d.getRemarks(),
                 d.getExpiryDate(), d.getActivatedAt(), d.getTimezone(),
@@ -237,7 +237,6 @@ public class DeviceService {
         device.setPort(r.port());
         device.setCategory(blankToDefault(r.category(), "GPS"));
         device.setProjectId(r.projectId());
-        device.setGroupId(r.groupId());
         device.setVehicleId(r.vehicleId());
         device.setManagerId(r.managerId());
         device.setDriverId(r.driverId());
@@ -268,9 +267,6 @@ public class DeviceService {
         }
         if (r.projectId() != null && projectRepository.findByIdAndTenantId(r.projectId(), tenantId).isEmpty()) {
             throw new BadRequestException("Project is not available for this tenant");
-        }
-        if (r.groupId() != null && groupRepository.findByIdAndTenantId(r.groupId(), tenantId).isEmpty()) {
-            throw new BadRequestException("Group is not available for this tenant");
         }
         if (r.managerId() != null && userRepository.findByIdAndTenantId(r.managerId(), tenantId).isEmpty()) {
             throw new BadRequestException("Manager is not available for this tenant");

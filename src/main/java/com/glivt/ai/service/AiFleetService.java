@@ -72,8 +72,8 @@ import org.springframework.transaction.annotation.Transactional;
 public class AiFleetService {
 
     private static final Logger log = LoggerFactory.getLogger(AiFleetService.class);
-    private static final Set<DeviceState> ACTIVE_STATES =
-            Set.of(DeviceState.RUNNING, DeviceState.STOPPED, DeviceState.IDLE);
+    private static final Set<DeviceState> ACTIVE_STATES = Set.of(DeviceState.RUNNING, DeviceState.STOPPED,
+            DeviceState.IDLE);
     private static final Set<String> HIGH_RISK_LEVELS = Set.of("HIGH", "CRITICAL");
     private static final double RISKY_DRIVER_THRESHOLD = 60.0;
 
@@ -96,19 +96,19 @@ public class AiFleetService {
     private static final ObjectMapper objectMapper = new ObjectMapper();
 
     public AiFleetService(AiEventRepository aiEventRepository,
-                          AiFeedbackRepository aiFeedbackRepository,
-                          DriverScoreDailyRepository driverScoreRepository,
-                          GeofenceSuggestionRepository geofenceSuggestionRepository,
-                          MaintenancePredictionRepository maintenanceRepository,
-                          DispatchRecommendationRepository dispatchRepository,
-                          VehicleRepository vehicleRepository,
-                          EventRepository eventRepository,
-                          DeviceCurrentPositionRepository currentPositionRepository,
-                          GeofenceService geofenceService,
-                          FleetAccessPolicy accessPolicy,
-                          AuditService auditService,
-                          PythonAiClient pythonAiClient,
-                          OllamaAiClient ollamaAiClient) {
+            AiFeedbackRepository aiFeedbackRepository,
+            DriverScoreDailyRepository driverScoreRepository,
+            GeofenceSuggestionRepository geofenceSuggestionRepository,
+            MaintenancePredictionRepository maintenanceRepository,
+            DispatchRecommendationRepository dispatchRepository,
+            VehicleRepository vehicleRepository,
+            EventRepository eventRepository,
+            DeviceCurrentPositionRepository currentPositionRepository,
+            GeofenceService geofenceService,
+            FleetAccessPolicy accessPolicy,
+            AuditService auditService,
+            PythonAiClient pythonAiClient,
+            OllamaAiClient ollamaAiClient) {
         this.aiEventRepository = aiEventRepository;
         this.aiFeedbackRepository = aiFeedbackRepository;
         this.driverScoreRepository = driverScoreRepository;
@@ -184,7 +184,7 @@ public class AiFleetService {
     }
 
     private static double fleetHealthScore(long unackAlerts, long criticalRisk, long highMaintenance,
-                                           long riskyDrivers, long routeDeviations) {
+            long riskyDrivers, long routeDeviations) {
         double score = 100.0;
         score -= Math.min(30.0, unackAlerts * 2.0);
         score -= Math.min(25.0, criticalRisk * 5.0);
@@ -200,7 +200,7 @@ public class AiFleetService {
 
     @Transactional(readOnly = true)
     public PageResponse<AiEventDto> listEvents(Long tenantId, Long vehicleId, String severity,
-                                               String eventType, Pageable pageable) {
+            String eventType, Pageable pageable) {
         if (vehicleId != null) {
             accessPolicy.requireVehicle(tenantId, vehicleId);
         }
@@ -276,13 +276,16 @@ public class AiFleetService {
         if (mlResult != null && mlResult.get("estimated_duration_minutes") != null) {
             durationMinutes = ((Number) mlResult.get("estimated_duration_minutes")).doubleValue();
             confidence = mlResult.get("confidence") != null
-                    ? ((Number) mlResult.get("confidence")).doubleValue() : 0.7;
+                    ? ((Number) mlResult.get("confidence")).doubleValue()
+                    : 0.7;
             source = "ML";
             // Carry the AI service's explainability through when it provided it.
             lateProbability = mlResult.get("late_probability") != null
-                    ? ((Number) mlResult.get("late_probability")).doubleValue() : 0.2;
+                    ? ((Number) mlResult.get("late_probability")).doubleValue()
+                    : 0.2;
             rangeMinutes = mlResult.get("range_minutes") != null
-                    ? ((Number) mlResult.get("range_minutes")).doubleValue() : durationMinutes * 0.15;
+                    ? ((Number) mlResult.get("range_minutes")).doubleValue()
+                    : durationMinutes * 0.15;
             if (mlResult.get("reasons") instanceof List<?> list) {
                 for (Object o : list) {
                     reasons.add(String.valueOf(o));
@@ -327,7 +330,7 @@ public class AiFleetService {
     }
 
     private Map<String, Object> tryPythonEta(Long tenantId, EtaRequestDto req,
-                                             double distanceKm, double currentSpeed) {
+            double distanceKm, double currentSpeed) {
         try {
             Map<String, Object> payload = new HashMap<>();
             payload.put("tenant_id", tenantId);
@@ -472,8 +475,8 @@ public class AiFleetService {
 
     @Transactional
     public DispatchRecommendResponseDto dispatchRecommend(Long tenantId, Long userId,
-                                                          String username,
-                                                          DispatchRecommendRequestDto req) {
+            String username,
+            DispatchRecommendRequestDto req) {
         List<Vehicle> candidates;
         if (req.getCandidateVehicleIds() != null && !req.getCandidateVehicleIds().isEmpty()) {
             candidates = req.getCandidateVehicleIds().stream()
@@ -535,8 +538,8 @@ public class AiFleetService {
     }
 
     private void persistDispatchRecommendation(Long tenantId, DispatchRecommendRequestDto req,
-                                               List<DispatchRecommendResponseDto.RankedVehicleDto> ranked,
-                                               String topReason) {
+            List<DispatchRecommendResponseDto.RankedVehicleDto> ranked,
+            String topReason) {
         try {
             DispatchRecommendation rec = new DispatchRecommendation();
             rec.setTenantId(tenantId);
@@ -657,10 +660,14 @@ public class AiFleetService {
     }
 
     private static String gradeFor(double score) {
-        if (score >= 90) return "A";
-        if (score >= 80) return "B";
-        if (score >= 70) return "C";
-        if (score >= 60) return "D";
+        if (score >= 90)
+            return "A";
+        if (score >= 80)
+            return "B";
+        if (score >= 70)
+            return "C";
+        if (score >= 60)
+            return "D";
         return "E";
     }
 
@@ -875,7 +882,7 @@ public class AiFleetService {
         double dLon = Math.toRadians(lon2 - lon1);
         double a = Math.sin(dLat / 2) * Math.sin(dLat / 2)
                 + Math.cos(Math.toRadians(lat1)) * Math.cos(Math.toRadians(lat2))
-                * Math.sin(dLon / 2) * Math.sin(dLon / 2);
+                        * Math.sin(dLon / 2) * Math.sin(dLon / 2);
         return r * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
     }
 }

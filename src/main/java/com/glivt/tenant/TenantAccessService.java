@@ -90,7 +90,7 @@ public class TenantAccessService {
             if (homeTenantId != null) {
                 all.add(homeTenantId);
             }
-            tenantRepository.findAll().forEach(t -> all.add(t.getId()));
+            all.addAll(tenantRepository.findAllIds());
             return all;
         }
         Set<Long> ids = new LinkedHashSet<>();

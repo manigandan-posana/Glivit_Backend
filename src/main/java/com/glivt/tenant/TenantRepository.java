@@ -11,6 +11,9 @@ import org.springframework.data.repository.query.Param;
 
 public interface TenantRepository extends JpaRepository<Tenant, Long> {
 
+    @Query("SELECT t.id FROM Tenant t")
+    List<Long> findAllIds();
+
     Optional<Tenant> findByCompanyCodeIgnoreCase(String companyCode);
 
     boolean existsByCompanyCodeIgnoreCase(String companyCode);

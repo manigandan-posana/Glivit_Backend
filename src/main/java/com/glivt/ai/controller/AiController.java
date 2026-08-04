@@ -54,7 +54,7 @@ public class AiController {
     private final RateLimiter rateLimiter;
 
     public AiController(AiFleetService fleetService, AiAlertBroadcaster broadcaster,
-                        CurrentUser currentUser, RateLimiter rateLimiter) {
+            CurrentUser currentUser, RateLimiter rateLimiter) {
         this.fleetService = fleetService;
         this.broadcaster = broadcaster;
         this.currentUser = currentUser;

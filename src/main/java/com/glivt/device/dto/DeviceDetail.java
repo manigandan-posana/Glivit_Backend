@@ -10,7 +10,6 @@ public record DeviceDetail(
         String model,
         String category,
         Long projectId,
-        Long groupId,
         Long vehicleId,
         String vehicleName,
         Long managerId,
