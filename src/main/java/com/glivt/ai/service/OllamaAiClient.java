@@ -34,13 +34,18 @@ public class OllamaAiClient {
         try {
             String fullPromptText = (systemPrompt != null ? systemPrompt + "\n\n" : "") + userContext;
             Prompt prompt = new Prompt(fullPromptText);
-            String response = chatModel.call(prompt).getResult().getOutput().getText();
+            
+            // Enforce a strict 10-second timeout. If Ollama on the local machine hangs, 
+            // this guarantees the thread won't block forever and will use the fallback.
+            String response = java.util.concurrent.CompletableFuture.supplyAsync(() -> 
+                chatModel.call(prompt).getResult().getOutput().getText()
+            ).orTimeout(10, java.util.concurrent.TimeUnit.SECONDS).join();
 
             if (response != null && !response.isBlank()) {
                 return response.trim();
             }
         } catch (Exception ex) {
-            log.warn("Ollama AI invocation failed: {}. Utilizing deterministic fallback.", ex.getMessage());
+            log.warn("Ollama AI invocation failed or timed out: {}. Utilizing deterministic fallback.", ex.getMessage());
         }
 
         return fallbackText;

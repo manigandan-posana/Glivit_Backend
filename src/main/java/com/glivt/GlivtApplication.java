@@ -10,6 +10,7 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 @EnableScheduling
 public class GlivtApplication {
 
+	
 	public static void main(String[] args) {
 		SpringApplication.run(GlivtApplication.class, args);
 	}

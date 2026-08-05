@@ -20,7 +20,7 @@ public class PythonAiClient {
 
     public PythonAiClient(
             @Value("${app.ai.python-service.url:http://localhost:8001}") String pythonServiceUrl,
-            @Value("${app.ai.python-service.token:}") String internalToken,
+            @Value("${app.ai.python-service.token:glivt-dev-2024}") String internalToken,
             @Value("${app.ai.python-service.timeout-ms:5000}") int timeoutMs) {
         org.springframework.http.client.SimpleClientHttpRequestFactory factory = new org.springframework.http.client.SimpleClientHttpRequestFactory();
         factory.setConnectTimeout(timeoutMs);

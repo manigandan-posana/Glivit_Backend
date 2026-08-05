@@ -78,7 +78,7 @@ public class AiController {
         int safeSize = Math.min(Math.max(size, 1), MAX_PAGE_SIZE);
         return ApiResponse.ok(fleetService.listEvents(currentUser.tenantId(), vehicleId, severity,
                 eventType, PageRequest.of(Math.max(page, 0), safeSize)));
-    }
+            }
 
     @PostMapping("/events/{id}/acknowledge")
     public ApiResponse<AiEventDto> acknowledge(@PathVariable Long id) {
