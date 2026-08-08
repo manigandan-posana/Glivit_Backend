@@ -50,8 +50,32 @@ public class GeofenceSuggestion {
     @Column(name = "polygon_json", columnDefinition = "TEXT")
     private String polygonJson;
 
+    /** PENDING | APPROVED | DISMISSED */
     @Column(nullable = false, length = 24)
     private String status = "PENDING";
+
+    // Visit statistics a reviewer needs before approving the suggestion.
+
+    @Column(name = "visit_count", nullable = false)
+    private int visitCount = 0;
+
+    @Column(name = "average_stop_minutes", nullable = false)
+    private double averageStopMinutes = 0.0;
+
+    @Column(name = "first_visit_at")
+    private Instant firstVisitAt;
+
+    @Column(name = "last_visit_at")
+    private Instant lastVisitAt;
+
+    @Column(name = "distinct_vehicle_count", nullable = false)
+    private int distinctVehicleCount = 0;
+
+    @Column(name = "dismissed_by")
+    private Long dismissedBy;
+
+    @Column(name = "updated_at")
+    private Instant updatedAt;
 
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
@@ -61,5 +85,11 @@ public class GeofenceSuggestion {
         if (this.createdAt == null) {
             this.createdAt = Instant.now();
         }
+        this.updatedAt = Instant.now();
+    }
+
+    @jakarta.persistence.PreUpdate
+    void onUpdate() {
+        this.updatedAt = Instant.now();
     }
 }

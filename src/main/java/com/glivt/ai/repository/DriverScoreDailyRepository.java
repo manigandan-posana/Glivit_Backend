@@ -7,7 +7,7 @@ import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
-@Repository
+
 public interface DriverScoreDailyRepository extends JpaRepository<DriverScoreDaily, Long> {
 
     Optional<DriverScoreDaily> findByTenantIdAndDriverIdAndScoreDateAndScorePeriod(

@@ -5,7 +5,7 @@ import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
-@Repository
+
 public interface AiPromptVersionRepository extends JpaRepository<AiPromptVersion, Long> {
 
     Optional<AiPromptVersion> findByPromptKeyAndVersion(String promptKey, String version);

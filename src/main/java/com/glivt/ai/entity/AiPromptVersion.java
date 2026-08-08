@@ -36,7 +36,7 @@ public class AiPromptVersion {
     private String systemPrompt;
 
     @Column(name = "model_name", nullable = false, length = 96)
-    private String modelName = "qwen3.5:2b";
+    private String modelName = "qwen3.5:0.8b";
 
     @Column(nullable = false)
     private boolean active = true;

@@ -79,6 +79,29 @@ public class DriverScoreDaily {
     @Column(name = "breakdown_json", columnDefinition = "TEXT")
     private String breakdownJson;
 
+    /** LOW | MEDIUM | HIGH | CRITICAL */
+    @Column(name = "risk_level", nullable = false, length = 16)
+    private String riskLevel = "LOW";
+
+    @Column(length = 4)
+    private String grade;
+
+    @Column(name = "reasons_json", columnDefinition = "TEXT")
+    private String reasonsJson;
+
+    /** PYTHON_AI | RULE - so the UI never claims a model produced a rule result. */
+    @Column(nullable = false, length = 32)
+    private String source = "RULE";
+
+    @Column(name = "model_version", length = 64)
+    private String modelVersion;
+
+    @Column(name = "rule_version", length = 64)
+    private String ruleVersion;
+
+    @Column(name = "calculated_at")
+    private Instant calculatedAt;
+
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
 

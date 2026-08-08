@@ -66,6 +66,14 @@ public class Geofence {
     @Column(name = "active_schedule", length = 256)
     private String activeSchedule;
 
+    /**
+     * Optional speed rule for this zone (for example a depot or school zone).
+     * Used by the server-side speed-limit resolver; a device-reported limit is
+     * never trusted.
+     */
+    @Column(name = "speed_limit_kph")
+    private Double speedLimitKph;
+
     @Column(nullable = false)
     private boolean active = true;
 

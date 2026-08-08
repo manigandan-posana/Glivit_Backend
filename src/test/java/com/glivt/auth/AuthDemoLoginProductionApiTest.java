@@ -14,7 +14,12 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @Transactional
 @ActiveProfiles("prod")
-@TestPropertySource(properties = "app.demo-login.enabled=true")
+@TestPropertySource(properties = {
+        "app.demo-login.enabled=true",
+        // Production refuses to start without a shared AI token (see
+        // AiConfigurationValidator), so supply one for this context to boot.
+        "app.ai.python-service.token=production-context-test-token"
+})
 class AuthDemoLoginProductionApiTest extends ApiTestSupport {
 
     @Test

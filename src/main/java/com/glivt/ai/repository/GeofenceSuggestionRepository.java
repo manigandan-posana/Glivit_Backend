@@ -6,7 +6,7 @@ import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
-@Repository
+
 public interface GeofenceSuggestionRepository extends JpaRepository<GeofenceSuggestion, Long> {
 
     List<GeofenceSuggestion> findByTenantIdAndStatus(Long tenantId, String status);

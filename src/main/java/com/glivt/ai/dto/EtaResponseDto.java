@@ -20,4 +20,14 @@ public class EtaResponseDto {
     private double confidence;
     private Map<String, Object> factors;
     private String structuredExplanation;
+    /** PYTHON_AI/MODEL when the AI service answered, RULE when it degraded. */
+    private String source;
+    /** ROAD_ROUTE or STRAIGHT_LINE_ADJUSTED - never implies routing that did not happen. */
+    private String distanceSource;
+    /** LIVE, TIME_OF_DAY_PROFILE or NONE. */
+    private String trafficInput;
+    /** Plus/minus confidence band around the estimate, in minutes. */
+    private double rangeMinutes;
+    private double lateProbability;
+    private Instant calculatedAt;
 }

@@ -74,6 +74,48 @@ public class TripFeatureSnapshot {
     @Column(name = "summary_text", columnDefinition = "TEXT")
     private String summaryText;
 
+    // ------------------------------------------------------------------
+    // Trip-level driving features. These are what the daily driver score
+    // aggregates, so they are captured once at trip completion rather than
+    // recomputed from raw positions every night.
+    // ------------------------------------------------------------------
+
+    @Column(name = "speeding_seconds", nullable = false)
+    private int speedingSeconds = 0;
+
+    @Column(name = "speeding_event_count", nullable = false)
+    private int speedingEventCount = 0;
+
+    @Column(name = "harsh_accel_count", nullable = false)
+    private int harshAccelCount = 0;
+
+    @Column(name = "harsh_brake_count", nullable = false)
+    private int harshBrakeCount = 0;
+
+    @Column(name = "sharp_turn_count", nullable = false)
+    private int sharpTurnCount = 0;
+
+    @Column(name = "night_driving_minutes", nullable = false)
+    private int nightDrivingMinutes = 0;
+
+    @Column(name = "route_deviation_count", nullable = false)
+    private int routeDeviationCount = 0;
+
+    @Column(name = "critical_incident_count", nullable = false)
+    private int criticalIncidentCount = 0;
+
+    @Column(name = "high_incident_count", nullable = false)
+    private int highIncidentCount = 0;
+
+    @Column(name = "avg_gps_confidence", nullable = false)
+    private double avgGpsConfidence = 1.0;
+
+    @Column(name = "min_gps_confidence", nullable = false)
+    private double minGpsConfidence = 1.0;
+
+    @Column(nullable = false, length = 16)
+    private String status = "COMPLETED";
+
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
 

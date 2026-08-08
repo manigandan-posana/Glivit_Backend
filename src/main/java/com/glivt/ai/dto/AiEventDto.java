@@ -32,4 +32,23 @@ public class AiEventDto {
     private Long acknowledgedBy;
     private Instant acknowledgedAt;
     private Instant createdAt;
+
+    // Incident view: repeated detections fold into one record rather than
+    // producing a row per GPS packet.
+    /** OPEN | ACKNOWLEDGED | RESOLVED */
+    private String status;
+    private int occurrenceCount;
+    private Instant firstObservedAt;
+    private Instant lastObservedAt;
+    /** Other anomaly types detected alongside this one. */
+    private java.util.List<String> relatedEventTypes;
+
+    // Resolved context, so the UI never has to guess.
+    private Long routeId;
+    private Double distanceFromRouteMeters;
+    private Double speedLimitKph;
+    /** ROUTE_RULE | GEOFENCE_RULE | ROAD_METADATA | TENANT_POLICY | VEHICLE_TYPE_DEFAULT */
+    private String speedLimitSource;
+    /** RULE | ML_ASSISTED - never claims a model produced a rule result. */
+    private String source;
 }

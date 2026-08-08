@@ -119,6 +119,43 @@ public class FleetAccessPolicy {
         }
     }
 
+    /**
+     * The vehicles this user may reach, expressed the same way as
+     * {@link DeviceScope}. Used by AI features (semantic search, chat context)
+     * so the assistant can never widen a user's access beyond what the rest of
+     * the app already allows.
+     */
+    @Transactional(readOnly = true)
+    public VehicleScope vehicleScope(AppUserPrincipal user) {
+        if (user.hasPermission(PermissionKeys.VIEW_ALL_VEHICLES)) {
+            return VehicleScope.all();
+        }
+        Long tenantId = user.getTenantId();
+        Set<Long> vehicleIds = new HashSet<>();
+
+        List<Long> driverIds = driverRepository.driverIdsForUser(tenantId, user.getUserId());
+        if (!driverIds.isEmpty()) {
+            vehicleIds.addAll(vehicleDriverAssignmentRepository.activeVehicleIds(tenantId, driverIds));
+        }
+        return VehicleScope.of(vehicleIds);
+    }
+
+    /** Vehicle-level equivalent of {@link DeviceScope}. */
+    public record VehicleScope(boolean unrestricted, Set<Long> vehicleIds) {
+
+        public static VehicleScope all() {
+            return new VehicleScope(true, Set.of());
+        }
+
+        public static VehicleScope of(Set<Long> vehicleIds) {
+            return new VehicleScope(false, vehicleIds);
+        }
+
+        public boolean allows(Long vehicleId) {
+            return unrestricted || (vehicleId != null && vehicleIds.contains(vehicleId));
+        }
+    }
+
     private static ResourceNotFoundException notFound() {
         return new ResourceNotFoundException("Not found");
     }

@@ -1,12 +1,17 @@
 package com.glivt.ingest;
 
-import com.glivt.ai.dto.GpsFeatures;
-import com.glivt.position.Position;
-
 /**
- * Published after a valid position is committed. AI evaluation listens for this
- * AFTER_COMMIT so the heavy anomaly/LLM work never runs inside the ingestion
- * transaction and never blocks the device response.
+ * Published after a valid position is committed, purely so the live map can
+ * stream it.
+ *
+ * <p>AI evaluation deliberately does NOT listen for this: it is driven by the
+ * durable {@code ai_position_outbox} instead, so an in-memory event listener can
+ * never be the reason an anomaly is missed after a restart, and a slow AI stack
+ * can never back up onto the ingestion thread.
+ *
+ * @param outOfOrder true when the packet did not advance the live snapshot, so
+ *                   subscribers must not move the marker backwards
  */
-public record PositionIngestedEvent(Position position, GpsFeatures features, double speedLimitKph) {
+public record PositionIngestedEvent(Long tenantId, Long deviceId, Long positionId,
+        boolean outOfOrder) {
 }

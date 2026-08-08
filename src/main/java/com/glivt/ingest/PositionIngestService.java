@@ -1,6 +1,9 @@
 package com.glivt.ingest;
 
 import com.glivt.ai.dto.GpsFeatures;
+import com.glivt.ai.service.AiEvaluationPayload;
+import com.glivt.ai.service.AiPositionOutboxService;
+import com.glivt.ai.service.DeviceMotionStateService;
 import com.glivt.ai.service.GpsFeatureService;
 import com.glivt.common.exception.BadRequestException;
 import com.glivt.common.exception.UnauthorizedException;
@@ -13,6 +16,8 @@ import com.glivt.position.DeviceState;
 import com.glivt.position.Position;
 import com.glivt.position.PositionRepository;
 import java.time.Instant;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -20,30 +25,48 @@ import org.springframework.transaction.annotation.Transactional;
 /**
  * GPS ingestion pipeline. Authenticates the device by token, resolves the tenant
  * server-side, validates the packet, persists the raw point, updates the current
- * snapshot with a deterministically-derived state, and publishes an after-commit
- * event for asynchronous AI evaluation. Core ingestion never depends on AI: if
- * Python/Ollama are down the position is still stored and the location updated.
+ * snapshot with a deterministically-derived state, and enqueues an outbox entry
+ * for asynchronous AI evaluation.
+ *
+ * <p>Ingestion never depends on AI. The outbox row commits with the position and
+ * a separate worker performs the scoring, so if Python or Ollama are down the
+ * position is still stored, the live map still updates and the device still gets
+ * a fast response.
+ *
+ * <p>Out-of-order packets are handled explicitly: they are stored for audit but
+ * do not move the live position, do not advance motion state and are never sent
+ * to real-time anomaly scoring - where a negative time gap previously became a
+ * fabricated 0.5-second gap and produced impossible-speed false positives.
  */
 @Service
 public class PositionIngestService {
 
-    private static final double DEFAULT_SPEED_LIMIT_KPH = 80.0;
+    private static final Logger log = LoggerFactory.getLogger(PositionIngestService.class);
+
+    /** Below this GPS confidence a packet is too unreliable to score. */
+    private static final double MIN_AI_CONFIDENCE = 0.2;
 
     private final DeviceRepository deviceRepository;
     private final PositionRepository positionRepository;
     private final DeviceCurrentPositionRepository currentPositionRepository;
     private final GpsFeatureService gpsFeatureService;
+    private final DeviceMotionStateService motionStateService;
+    private final AiPositionOutboxService outboxService;
     private final ApplicationEventPublisher eventPublisher;
 
     public PositionIngestService(DeviceRepository deviceRepository,
                                  PositionRepository positionRepository,
                                  DeviceCurrentPositionRepository currentPositionRepository,
                                  GpsFeatureService gpsFeatureService,
+                                 DeviceMotionStateService motionStateService,
+                                 AiPositionOutboxService outboxService,
                                  ApplicationEventPublisher eventPublisher) {
         this.deviceRepository = deviceRepository;
         this.positionRepository = positionRepository;
         this.currentPositionRepository = currentPositionRepository;
         this.gpsFeatureService = gpsFeatureService;
+        this.motionStateService = motionStateService;
+        this.outboxService = outboxService;
         this.eventPublisher = eventPublisher;
     }
 
@@ -74,12 +97,86 @@ public class PositionIngestService {
         GpsFeatures features = gpsFeatureService.compute(previous, lat, lng, deviceSpeed, heading,
                 req.accuracyMeters(), recordedAt, receivedAt);
 
-        // Ignore exact duplicate packets (same place & time) — no persistence, no AI.
+        // Ignore exact duplicate packets (same place & time) - no persistence, no AI.
         if (features.duplicate()) {
-            return new IngestResult(true, true, previous != null ? previous.getState().name() : "NO_DATA",
+            motionStateService.recordQualityIssue(device.getTenantId(), device.getId(),
+                    DeviceMotionStateService.QualityIssue.DUPLICATE);
+            return new IngestResult(true, true,
+                    previous != null ? previous.getState().name() : "NO_DATA",
                     features.gpsConfidence(), null);
         }
 
+        Position position = positionRepository.save(toPosition(device, req, lat, lng, deviceSpeed,
+                heading, recordedAt, receivedAt, features));
+
+        DeviceState state = deriveState(req.ignitionOn(), features.calculatedSpeedKph(),
+                features.coordinateValid());
+
+        if (features.outOfOrder()) {
+            // Stored above for audit, but it must not rewrite the present: the
+            // live location stays on the newest packet, motion state is not
+            // advanced, and no anomaly scoring is performed. The packet is
+            // recorded as a telemetry-quality metric instead.
+            motionStateService.recordQualityIssue(device.getTenantId(), device.getId(),
+                    DeviceMotionStateService.QualityIssue.OUT_OF_ORDER);
+            log.debug("gps.outOfOrder tenantId={} deviceId={} recordedAt={} gapSeconds={}",
+                    device.getTenantId(), device.getId(), recordedAt,
+                    features.timeFromPreviousSeconds());
+            eventPublisher.publishEvent(new PositionIngestedEvent(device.getTenantId(),
+                    device.getId(), position.getId(), true));
+            return new IngestResult(true, false,
+                    previous != null ? previous.getState().name() : state.name(),
+                    features.gpsConfidence(), position.getId());
+        }
+
+        upsertCurrent(device, position, state, features);
+
+        // Continuous stationary time is tracked persistently per device, so the
+        // idling rule can actually be reached.
+        DeviceMotionStateService.MotionSnapshot motion = motionStateService.recordPosition(
+                device.getTenantId(), device.getId(), device.getVehicleId(), lat, lng,
+                deviceSpeed, req.ignitionOn(), recordedAt);
+
+        if (features.gpsConfidence() < MIN_AI_CONFIDENCE) {
+            motionStateService.recordQualityIssue(device.getTenantId(), device.getId(),
+                    DeviceMotionStateService.QualityIssue.LOW_CONFIDENCE);
+            eventPublisher.publishEvent(new PositionIngestedEvent(device.getTenantId(),
+                    device.getId(), position.getId(), false));
+            return new IngestResult(true, false, state.name(), features.gpsConfidence(),
+                    position.getId());
+        }
+
+        // A device-reported speed limit is deliberately NOT forwarded; the limit
+        // is resolved server-side during evaluation.
+        outboxService.enqueue(new AiEvaluationPayload(
+                device.getTenantId(),
+                device.getId(),
+                device.getVehicleId(),
+                position.getId(),
+                lat,
+                lng,
+                deviceSpeed,
+                features.calculatedSpeedKph(),
+                features.accelerationMps2(),
+                features.headingChangeDegrees(),
+                features.distanceFromPreviousMeters(),
+                features.timeFromPreviousSeconds(),
+                req.accuracyMeters(),
+                features.gpsConfidence(),
+                motion.continuousStationarySeconds(),
+                req.ignitionOn(),
+                recordedAt));
+
+        // Live-map streaming only; AI evaluation is driven by the outbox.
+        eventPublisher.publishEvent(new PositionIngestedEvent(device.getTenantId(),
+                device.getId(), position.getId(), false));
+
+        return new IngestResult(true, false, state.name(), features.gpsConfidence(), position.getId());
+    }
+
+    private Position toPosition(Device device, IngestPositionRequest req, double lat, double lng,
+            double deviceSpeed, double heading, Instant recordedAt, Instant receivedAt,
+            GpsFeatures features) {
         Position position = new Position();
         position.setTenantId(device.getTenantId());
         position.setDeviceId(device.getId());
@@ -102,21 +199,7 @@ public class PositionIngestService {
         position.setGpsValid(features.coordinateValid());
         position.setDeviceTime(recordedAt);
         position.setServerTime(receivedAt);
-        position = positionRepository.save(position);
-
-        DeviceState state = deriveState(req.ignitionOn(), features.calculatedSpeedKph(),
-                features.coordinateValid());
-
-        // Only advance the live location for in-order, valid points.
-        if (!features.outOfOrder()) {
-            upsertCurrent(device, position, state, features);
-        }
-
-        double speedLimit = req.speedLimitKph() != null ? req.speedLimitKph() : DEFAULT_SPEED_LIMIT_KPH;
-        // AFTER_COMMIT listener will kick off asynchronous AI evaluation.
-        eventPublisher.publishEvent(new PositionIngestedEvent(position, features, speedLimit));
-
-        return new IngestResult(true, false, state.name(), features.gpsConfidence(), position.getId());
+        return position;
     }
 
     private void upsertCurrent(Device device, Position position, DeviceState state, GpsFeatures features) {

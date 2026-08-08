@@ -64,6 +64,31 @@ public class MaintenancePrediction {
     @Column(nullable = false, length = 24)
     private String status = "PENDING";
 
+    @Column(name = "predicted_component", length = 64)
+    private String predictedComponent;
+
+    @Column(name = "components_json", columnDefinition = "TEXT")
+    private String componentsJson;
+
+    @Column(name = "remaining_km")
+    private Double remainingKm;
+
+    @Column(nullable = false)
+    private double confidence = 0.6;
+
+    /** MODEL when a trained model contributed, RULE otherwise. Never faked. */
+    @Column(nullable = false, length = 32)
+    private String source = "RULE";
+
+    @Column(name = "model_version", length = 64)
+    private String modelVersion;
+
+    @Column(name = "rule_version", length = 64)
+    private String ruleVersion;
+
+    @Column(name = "evaluated_at")
+    private Instant evaluatedAt;
+
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
 

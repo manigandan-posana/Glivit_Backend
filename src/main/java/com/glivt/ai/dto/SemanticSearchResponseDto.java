@@ -14,6 +14,10 @@ import lombok.NoArgsConstructor;
 public class SemanticSearchResponseDto {
     private String query;
     private List<SearchMatchDto> matches;
+    /** EMBEDDING for real vector search, KEYWORD for the labelled degraded mode. */
+    private String source;
+    private boolean degraded;
+    private String errorCode;
 
     @Data
     @Builder
@@ -21,6 +25,10 @@ public class SemanticSearchResponseDto {
     @AllArgsConstructor
     public static class SearchMatchDto {
         private String id;
+        /** AI_EVENT | ALERT | TRIP | MAINTENANCE - the real source table. */
+        private String sourceType;
+        /** The real source record id, so the UI can open the underlying record. */
+        private Long sourceId;
         private double score;
         private String content;
         private Map<String, Object> metadata;

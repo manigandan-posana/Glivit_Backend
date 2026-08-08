@@ -32,15 +32,15 @@ public class LivePositionPublisher {
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void onPositionIngested(PositionIngestedEvent event) {
         // Out-of-order points don't advance the live snapshot, so don't stream them.
-        if (event.features().outOfOrder()) {
+        if (event.outOfOrder()) {
             return;
         }
         try {
-            currentPositionRepository.findById(event.position().getDeviceId())
+            currentPositionRepository.findById(event.deviceId())
                     .ifPresent(current ->
                             broadcaster.broadcast(current.getTenantId(), LivePositionDto.from(current)));
         } catch (Exception ex) {
-            log.warn("Live position broadcast failed for device {}", event.position().getDeviceId(), ex);
+            log.warn("Live position broadcast failed for device {}", event.deviceId(), ex);
         }
     }
 }

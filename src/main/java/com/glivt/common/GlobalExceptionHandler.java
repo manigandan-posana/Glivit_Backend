@@ -36,6 +36,18 @@ public class GlobalExceptionHandler {
         return ResponseEntity.badRequest().body(ApiResponse.fail(error));
     }
 
+    @ExceptionHandler(jakarta.validation.ConstraintViolationException.class)
+    public ResponseEntity<ApiResponse<Void>> handleConstraintViolation(jakarta.validation.ConstraintViolationException ex) {
+        Map<String, String> fieldErrors = new HashMap<>();
+        for (var violation : ex.getConstraintViolations()) {
+            String path = violation.getPropertyPath().toString();
+            String field = path.substring(path.lastIndexOf('.') + 1);
+            fieldErrors.putIfAbsent(field, violation.getMessage());
+        }
+        ApiError error = new ApiError("VALIDATION_FAILED", "Validation failed", fieldErrors);
+        return ResponseEntity.badRequest().body(ApiResponse.fail(error));
+    }
+
     @ExceptionHandler(HttpMessageNotReadableException.class)
     public ResponseEntity<ApiResponse<Void>> handleNotReadable(HttpMessageNotReadableException ex) {
         return ResponseEntity.badRequest()

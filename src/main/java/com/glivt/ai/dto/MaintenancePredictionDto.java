@@ -26,4 +26,10 @@ public class MaintenancePredictionDto {
     private List<String> recommendedActions;
     private String reasoning;
     private String status;
+    private String predictedComponent;
+    private Double remainingKm;
+    private double confidence;
+    /** MODEL only when a trained model contributed; RULE otherwise. */
+    private String source;
+    private java.time.Instant evaluatedAt;
 }

@@ -32,4 +32,13 @@ public class DriverScoreDto {
     private int anomaliesCount;
     private String breakdownJson;
     private String aiCoachingAdvice;
+    private String riskLevel;
+    private String reasonsJson;
+    /** PYTHON_AI | RULE | NONE - never claims a model produced a rule result. */
+    private String source;
+    private String ruleVersion;
+    private String modelVersion;
+    private java.time.Instant calculatedAt;
+    /** False when no score has been calculated for this driver yet. */
+    private boolean hasScore;
 }

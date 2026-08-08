@@ -193,7 +193,7 @@ CREATE TABLE ai_prompt_version (
     version       VARCHAR(32)  NOT NULL,
     template_text TEXT         NOT NULL,
     system_prompt TEXT         NULL,
-    model_name    VARCHAR(96)  NOT NULL DEFAULT 'qwen3.5:2b',
+    model_name    VARCHAR(96)  NOT NULL DEFAULT 'qwen3.5:0.8b',
     active        TINYINT(1)   NOT NULL DEFAULT 1,
     created_at    DATETIME(6)  NOT NULL,
     PRIMARY KEY (id),

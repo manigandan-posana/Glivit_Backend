@@ -31,7 +31,7 @@ public class DeviceService {
     private final DeviceRepository deviceRepository;
     private final DeviceCurrentPositionRepository currentPositionRepository;
     private final ProjectRepository projectRepository;
-    private final DeviceGroupRepository groupRepository;
+
     private final VehicleRepository vehicleRepository;
     private final UserRepository userRepository;
     private final DriverRepository driverRepository;
@@ -40,7 +40,7 @@ public class DeviceService {
     public DeviceService(DeviceRepository deviceRepository,
                          DeviceCurrentPositionRepository currentPositionRepository,
                          ProjectRepository projectRepository,
-                         DeviceGroupRepository groupRepository,
+
                          VehicleRepository vehicleRepository,
                          UserRepository userRepository,
                          DriverRepository driverRepository,
@@ -48,7 +48,7 @@ public class DeviceService {
         this.deviceRepository = deviceRepository;
         this.currentPositionRepository = currentPositionRepository;
         this.projectRepository = projectRepository;
-        this.groupRepository = groupRepository;
+
         this.vehicleRepository = vehicleRepository;
         this.userRepository = userRepository;
         this.driverRepository = driverRepository;

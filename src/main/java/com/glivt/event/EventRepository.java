@@ -13,6 +13,9 @@ public interface EventRepository extends JpaRepository<Event, Long> {
 
     Optional<Event> findByIdAndTenantId(Long id, Long tenantId);
 
+    /** Tenant-scoped recent alerts; used by AI semantic indexing and chat context. */
+    List<Event> findByTenantIdAndServerTimeAfter(Long tenantId, Instant after);
+
     long countByTenantId(Long tenantId);
 
     List<Event> findByTenantIdAndDeviceIdAndServerTimeBetweenOrderByServerTimeAsc(

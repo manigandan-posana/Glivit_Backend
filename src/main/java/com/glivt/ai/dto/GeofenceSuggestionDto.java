@@ -20,4 +20,9 @@ public class GeofenceSuggestionDto {
     private String reasoning;
     private String polygonJson;
     private String status;
+    private int visitCount;
+    private double averageStopMinutes;
+    private java.time.Instant firstVisitAt;
+    private java.time.Instant lastVisitAt;
+    private int distinctVehicleCount;
 }
